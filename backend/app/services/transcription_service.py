@@ -30,11 +30,13 @@ def transcribe_audio_file(input_file_path: str) -> str:
     try:
         logger.info(f"Preprocessing audio to 16kHz mono WAV: {temp_wav_path}")
         # Use ffmpeg-python to convert the input file to the format Whisper needs
+        # Use the configured ffmpeg path or fall back to 'ffmpeg' in PATH
+        ffmpeg_cmd = getattr(settings, 'FFMPEG_PATH', 'ffmpeg')
         (
             ffmpeg
             .input(input_file_path)
             .output(temp_wav_path, ar=16000, ac=1, acodec='pcm_s16le')
-            .run(cmd='ffmpeg', capture_stdout=True, capture_stderr=True, overwrite_output=True)
+            .run(cmd=ffmpeg_cmd, capture_stdout=True, capture_stderr=True, overwrite_output=True)
         )
     except ffmpeg.Error as e:
         logger.error(f"FFmpeg error: {e.stderr.decode()}")
