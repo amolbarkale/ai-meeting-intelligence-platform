@@ -16,3 +16,4 @@ python-dotenv==1.0.1
 # torchaudio
 # ffmpeg-python==0.2.1
 # chromadb==0.4.24
+eventlet
