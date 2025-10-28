@@ -74,8 +74,15 @@ celerybeat-schedule
 
 # Ignore the entire whisper.cpp cloned repository
 /whisper.cpp/
+whisper.cpp/
 
+# Ignore ffmpeg binaries
 /ffmpeg-master-latest-win64-gpl/
+ffmpeg-master-latest-win64-gpl/
+
+# Ignore whisper model files (large files)
+*.bin
+ggml-*.bin
 
 # Ignore uploaded media files
 /uploads/
