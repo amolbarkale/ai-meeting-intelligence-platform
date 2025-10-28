@@ -14,6 +14,8 @@ from worker import celery_app
 from .diarization_service import perform_diarization
 from .transcription_service import transcribe_audio_file
 from .llm_service import generate_meeting_insights
+from .vector_db_service import add_transcript_to_db
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -103,6 +105,9 @@ def process_meeting_file(meeting_id: str):
         meeting.sentiment = insights.get('sentiment_analysis')
         db.commit()
         logger.info(f"Successfully generated AI insights for meeting {meeting_id}")
+
+        # --- Step 5: Add to Knowledge Base ---
+        add_transcript_to_db(str(meeting.id), meeting.transcript)
 
         # --- Final Step: Mark as COMPLETED ---
         meeting.status = MeetingStatus.COMPLETED

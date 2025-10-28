@@ -1,10 +1,10 @@
 import uuid
+from typing import List, Dict, Any
 from pydantic import BaseModel
 from datetime import datetime
 from app.db.models import MeetingStatus
 from typing import Optional
 
-# Base model for meeting properties
 class MeetingBase(BaseModel):
     original_filename: str
 
@@ -17,7 +17,6 @@ class MeetingResponse(MeetingBase):
     class Config:
         from_attributes = True
 
-# Model for job status response
 class JobStatusResponse(BaseModel):
     meeting_id: uuid.UUID
     status: MeetingStatus
@@ -27,11 +26,18 @@ class JobStatusResponse(BaseModel):
 class MeetingDetailsResponse(MeetingResponse):
     transcript: Optional[str] = None
     summary: Optional[str] = None
-    
-    # Add the new fields
     key_points: Optional[str] = None
     action_items: Optional[str] = None
     sentiment: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class SearchResult(BaseModel):
+    content: str
+    metadata: Dict[str, Any]
+    distance: float
+
+class SearchResponse(BaseModel):
+    query: str
+    results: List[SearchResult]

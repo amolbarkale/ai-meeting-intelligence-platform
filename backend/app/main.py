@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1.endpoints import meetings
+from app.api.v1.endpoints import meetings, search 
 from app.db import database, models
 
 # For production, use Alembic migrations
@@ -21,11 +21,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include the API router
 app.include_router(
     meetings.router,
     prefix="/api/v1/meetings",
     tags=["Meetings"]
+)
+
+app.include_router(
+    search.router,
+    prefix="/api/v1/search",
+    tags=["Search"]
 )
 
 @app.get("/", tags=["Root"])

@@ -27,3 +27,7 @@ torch==2.3.1
 torchaudio==2.3.1
 # For merging diarization and transcription results
 pandas==2.2.2
+
+# For Vector DB and Embeddings
+chromadb==0.5.0
+sentence-transformers==2.7.0

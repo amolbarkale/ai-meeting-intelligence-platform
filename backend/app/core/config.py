@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str
     OLLAMA_MODEL: str
     HF_TOKEN: str
+    CHROMA_DB_PATH: str
 
     model_config = SettingsConfigDict(env_file=".env", extra='ignore')
 
