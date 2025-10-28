@@ -1,9 +1,18 @@
-fastapi==0.104.1
-uvicorn==0.24.0
-python-multipart==0.0.6
-openai-whisper==20231117
-torch==2.1.0
-torchaudio==2.1.0
-ffmpeg-python==0.2.1
-requests==2.31.0
-chromadb==0.4.24
+# requests==2.31.0
+
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+sqlalchemy==2.0.30
+pydantic-settings==2.2.1
+python-multipart==0.0.9
+celery==5.4.0
+redis==5.0.4
+python-dotenv==1.0.1
+
+# --- AI & ML Libraries (will be used in Phase 2) ---
+# We will uncomment these later when we build the real AI pipeline
+# openai-whisper==20231117
+# torch
+# torchaudio
+# ffmpeg-python==0.2.1
+# chromadb==0.4.24
