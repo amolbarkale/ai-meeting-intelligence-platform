@@ -19,9 +19,12 @@ class Meeting(Base):
     file_path = Column(String, nullable=False)
     status = Column(SQLEnum(MeetingStatus), nullable=False, default=MeetingStatus.PENDING)
     
-    # AI-generated content
     transcript = Column(String, nullable=True)
-    summary = Column(String, nullable=True)
+    summary = Column(String, nullable=True) # Will now store the abstract summary
+    
+    key_points = Column(String, nullable=True)
+    action_items = Column(String, nullable=True)
+    sentiment = Column(String, nullable=True)
     
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     FFMPEG_PATH: str = "ffmpeg"  # Default to system ffmpeg if not specified
     OLLAMA_BASE_URL: str
     OLLAMA_MODEL: str
+    HF_TOKEN: str
 
     model_config = SettingsConfigDict(env_file=".env", extra='ignore')
 

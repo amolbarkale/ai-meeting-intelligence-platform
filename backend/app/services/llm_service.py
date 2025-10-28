@@ -1,76 +1,66 @@
 import logging
-from langchain.chains.llm import LLMChain
 from langchain_community.llms.ollama import Ollama
 from langchain.prompts import PromptTemplate
-from langchain.chains.combine_documents.stuff import StuffDocumentsChain
-from langchain.chains.mapreduce import MapReduceDocumentsChain, ReduceDocumentsChain
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.chains import LLMChain
 from app.core.config import settings
+from . import prompts
 
 logger = logging.getLogger(__name__)
 
-def summarize_transcript(transcript: str) -> str:
+def generate_meeting_insights(transcript: str) -> dict:
     """
-    Summarizes a long transcript using the LangChain Map-Reduce strategy with Ollama.
-    """
-    logger.info("Initializing Ollama for summarization.")
+    Generates a comprehensive set of insights from a transcript using Ollama.
     
-    # Initialize the Ollama LLM
+    Returns a dictionary containing:
+    - abstract_summary
+    - key_points
+    - action_items
+    - sentiment_analysis
+    """
+    logger.info(f"Initializing Ollama with model: {settings.OLLAMA_MODEL}")
     llm = Ollama(base_url=settings.OLLAMA_BASE_URL, model=settings.OLLAMA_MODEL)
 
-    # --- Map Prompt ---
-    # This prompt is applied to each chunk of the transcript.
-    map_template = """
-    The following is a chunk of a meeting transcript:
-    "{docs}"
-    Based on this, please create a concise summary of the key points, decisions, and action items discussed in this chunk.
-    Helpful Summary:
-    """
-    map_prompt = PromptTemplate.from_template(map_template)
-    map_chain = LLMChain(llm=llm, prompt=map_prompt)
+    insights = {}
 
-    # --- Reduce Prompt ---
-    # This prompt is applied to the combined summaries from the map step.
-    reduce_template = """
-    The following is a set of summaries from a meeting transcript:
-    "{doc_summaries}"
-    Take these summaries and synthesize them into a single, final summary.
-    The summary should be well-structured, easy to read, and cover the most important topics, decisions, and action items from the entire meeting.
-    Final Summary:
-    """
-    reduce_prompt = PromptTemplate.from_template(reduce_template)
-    reduce_chain = LLMChain(llm=llm, prompt=reduce_prompt)
+    # --- 1. Generate Abstract Summary ---
+    try:
+        logger.info("Generating abstract summary...")
+        prompt_template = PromptTemplate(template=prompts.abstract_summary_prompt, input_variables=["transcript"])
+        chain = LLMChain(llm=llm, prompt=prompt_template)
+        insights['abstract_summary'] = chain.run(transcript=transcript)
+    except Exception as e:
+        logger.error(f"Error generating abstract summary: {e}")
+        insights['abstract_summary'] = "Error: Could not generate summary."
 
-    # Takes a list of documents, combines them, and passes to the reduce_chain
-    combine_documents_chain = StuffDocumentsChain(
-        llm_chain=reduce_chain, document_variable_name="doc_summaries"
-    )
+    # --- 2. Generate Key Points ---
+    try:
+        logger.info("Generating key points...")
+        prompt_template = PromptTemplate(template=prompts.key_points_prompt, input_variables=["transcript"])
+        chain = LLMChain(llm=llm, prompt=prompt_template)
+        insights['key_points'] = chain.run(transcript=transcript)
+    except Exception as e:
+        logger.error(f"Error generating key points: {e}")
+        insights['key_points'] = "Error: Could not generate key points."
 
-    # Combines and iteratively reduces the mapped documents
-    reduce_documents_chain = ReduceDocumentsChain(
-        combine_documents_chain=combine_documents_chain,
-        collapse_documents_chain=combine_documents_chain,
-        token_max=4000, # Adjust as needed for your model's context window
-    )
+    # --- 3. Generate Action Items ---
+    try:
+        logger.info("Generating action items...")
+        prompt_template = PromptTemplate(template=prompts.action_items_prompt, input_variables=["transcript"])
+        chain = LLMChain(llm=llm, prompt=prompt_template)
+        insights['action_items'] = chain.run(transcript=transcript)
+    except Exception as e:
+        logger.error(f"Error generating action items: {e}")
+        insights['action_items'] = "Error: Could not generate action items."
 
-    # The main Map-Reduce chain
-    map_reduce_chain = MapReduceDocumentsChain(
-        llm_chain=map_chain,
-        reduce_documents_chain=reduce_documents_chain,
-        document_variable_name="docs",
-        return_intermediate_steps=False,
-    )
+    # --- 4. Generate Sentiment Analysis ---
+    try:
+        logger.info("Generating sentiment analysis...")
+        prompt_template = PromptTemplate(template=prompts.sentiment_analysis_prompt, input_variables=["transcript"])
+        chain = LLMChain(llm=llm, prompt=prompt_template)
+        insights['sentiment_analysis'] = chain.run(transcript=transcript)
+    except Exception as e:
+        logger.error(f"Error generating sentiment analysis: {e}")
+        insights['sentiment_analysis'] = "Error: Could not generate sentiment analysis."
 
-    # Split the transcript into manageable chunks
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=2000, chunk_overlap=100
-    )
-    split_docs = text_splitter.create_documents([transcript])
-
-    logger.info(f"Starting Map-Reduce summarization with {len(split_docs)} chunks.")
-    
-    # Execute the chain
-    final_summary = map_reduce_chain.run(split_docs)
-    
-    logger.info("Summarization completed successfully.")
-    return final_summary
+    logger.info("All insights generated successfully.")
+    return insights

@@ -15,10 +15,15 @@ ffmpeg-python==0.2.0
 # --- AI & ML Libraries (will be used in Phase 2) ---
 # We will uncomment these later when we build the real AI pipeline
 # openai-whisper==20231117
-# torch
-# torchaudio
 # ffmpeg-python==0.2.1
 # chromadb==0.4.24
 eventlet
 langchain==0.2.1
 langchain-community==0.2.1
+
+# For Speaker Diarization
+pyannote.audio==3.1.1
+torch==2.3.1
+torchaudio==2.3.1
+# For merging diarization and transcription results
+pandas==2.2.2

@@ -7,7 +7,7 @@ import uuid
 from worker import celery_app
 
 from .transcription_service import transcribe_audio_file
-from .llm_service import summarize_transcript
+from .llm_service import generate_meeting_insights
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -35,19 +35,23 @@ def process_meeting_file(meeting_id: str):
             logger.info(f"Successfully transcribed meeting {meeting_id}")
         except Exception as e:
             logger.error(f"Transcription failed for meeting {meeting_id}: {e}")
-            # Set status to FAILED and re-raise the exception to stop the pipeline
             meeting.status = MeetingStatus.FAILED
             db.commit()
             raise e
         
         # === STEP 2: SUMMARIZATION ===
         try:
-            summary_text = summarize_transcript(meeting.transcript)
-            meeting.summary = summary_text
+            insights = generate_meeting_insights(meeting.transcript)
+            
+            meeting.summary = insights.get('abstract_summary')
+            meeting.key_points = insights.get('key_points')
+            meeting.action_items = insights.get('action_items')
+            meeting.sentiment = insights.get('sentiment_analysis')
+            
             db.commit()
-            logger.info(f"Successfully summarized meeting {meeting_id}")
+            logger.info(f"Successfully generated insights for meeting {meeting_id}")
         except Exception as e:
-            logger.error(f"Summarization failed for meeting {meeting_id}: {e}")
+            logger.error(f"Insight generation failed for meeting {meeting_id}: {e}")
             meeting.status = MeetingStatus.FAILED
             db.commit()
             raise e

@@ -68,3 +68,17 @@ def get_meeting_status(
         status=meeting.status,
         message=f"Processing status for meeting {meeting.id} is {meeting.status.value}"
     )
+
+@router.get("/{meeting_id}", response_model=schemas.MeetingDetailsResponse)
+def get_meeting_details(
+    meeting_id: uuid.UUID,
+    db: Session = Depends(database.get_db)
+):
+    """
+    Retrieve the full details, transcript, and summary of a processed meeting.
+    """
+    meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+
+    return meeting
