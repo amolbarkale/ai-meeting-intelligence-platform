@@ -1,44 +1,93 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2 } from "lucide-react"
-import MeetingCard from "./meeting-card"
+import { Badge } from "@/components/ui/badge"
+import { Loader2, Calendar, FileText, Clock, CheckCircle, XCircle, AlertCircle } from "lucide-react"
+import { useMeetingStatus } from "@/lib/hooks"
+import Link from "next/link"
 
 interface Meeting {
   id: string
-  filename: string
-  upload_date: string
-  status: string
+  original_filename: string
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
+  created_at: string
 }
 
 interface MeetingsListProps {
-  refreshTrigger: number
+  meetings: Meeting[]
+  isLoading: boolean
+  error: string | null
 }
 
-export default function MeetingsList({ refreshTrigger }: MeetingsListProps) {
-  const [meetings, setMeetings] = useState<Meeting[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const fetchMeetings = async () => {
-      try {
-        setIsLoading(true)
-        const response = await fetch("http://localhost:8000/meetings")
-        if (!response.ok) throw new Error("Failed to fetch meetings")
-        const data = await response.json()
-        setMeetings(data)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load meetings")
-      } finally {
-        setIsLoading(false)
-      }
+function MeetingCard({ meeting }: { meeting: Meeting }) {
+  const { status: statusData } = useMeetingStatus(meeting.id)
+  
+  const getStatusIcon = () => {
+    switch (meeting.status) {
+      case 'COMPLETED':
+        return <CheckCircle className="w-4 h-4 text-green-500" />
+      case 'FAILED':
+        return <XCircle className="w-4 h-4 text-red-500" />
+      case 'PROCESSING':
+        return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+      default:
+        return <Clock className="w-4 h-4 text-yellow-500" />
     }
+  }
 
-    fetchMeetings()
-  }, [refreshTrigger])
+  const getStatusColor = () => {
+    switch (meeting.status) {
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-800'
+      case 'FAILED':
+        return 'bg-red-100 text-red-800'
+      case 'PROCESSING':
+        return 'bg-blue-100 text-blue-800'
+      default:
+        return 'bg-yellow-100 text-yellow-800'
+    }
+  }
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    })
+  }
+
+  return (
+    <Link href={`/meeting/${meeting.id}`}>
+      <Card className="hover:shadow-md transition-shadow cursor-pointer">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                <h3 className="font-medium text-slate-900 truncate">
+                  {meeting.original_filename}
+                </h3>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <Calendar className="w-3 h-3" />
+                <span>{formatDate(meeting.created_at)}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 ml-4">
+              {getStatusIcon()}
+              <Badge className={getStatusColor()}>
+                {meeting.status.toLowerCase()}
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </Link>
+  )
+}
+
+export default function MeetingsList({ meetings, isLoading, error }: MeetingsListProps) {
   if (isLoading) {
     return (
       <Card>
@@ -53,7 +102,10 @@ export default function MeetingsList({ refreshTrigger }: MeetingsListProps) {
     return (
       <Card>
         <CardContent className="py-12">
-          <p className="text-center text-red-600">{error}</p>
+          <div className="flex items-center justify-center gap-2 text-red-600">
+            <AlertCircle className="w-5 h-5" />
+            <p>{error}</p>
+          </div>
         </CardContent>
       </Card>
     )
@@ -67,7 +119,10 @@ export default function MeetingsList({ refreshTrigger }: MeetingsListProps) {
       </CardHeader>
       <CardContent>
         {meetings.length === 0 ? (
-          <p className="text-center text-slate-500 py-8">No meetings yet. Upload one to get started.</p>
+          <div className="text-center py-8">
+            <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-500">No meetings yet. Upload one to get started.</p>
+          </div>
         ) : (
           <div className="space-y-3">
             {meetings.map((meeting) => (
