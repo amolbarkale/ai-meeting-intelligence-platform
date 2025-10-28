@@ -9,6 +9,9 @@ celery==5.4.0
 redis==5.0.4
 python-dotenv==1.0.1
 
+# For audio/video processing
+ffmpeg-python==0.2.0
+
 # --- AI & ML Libraries (will be used in Phase 2) ---
 # We will uncomment these later when we build the real AI pipeline
 # openai-whisper==20231117
