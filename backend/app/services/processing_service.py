@@ -7,6 +7,7 @@ import uuid
 from worker import celery_app
 
 from .transcription_service import transcribe_audio_file
+from .llm_service import summarize_transcript
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,13 +39,20 @@ def process_meeting_file(meeting_id: str):
             meeting.status = MeetingStatus.FAILED
             db.commit()
             raise e
-
-        # === SIMULATED AI PIPELINE - STEP 2: SUMMARIZATION (for now) ===
-        logger.info("Simulating summarization...")
-        time.sleep(10)
-        meeting.summary = "This is a dummy summary for the real transcript."
-        db.commit()
         
+        # === STEP 2: SUMMARIZATION ===
+        try:
+            summary_text = summarize_transcript(meeting.transcript)
+            meeting.summary = summary_text
+            db.commit()
+            logger.info(f"Successfully summarized meeting {meeting_id}")
+        except Exception as e:
+            logger.error(f"Summarization failed for meeting {meeting_id}: {e}")
+            meeting.status = MeetingStatus.FAILED
+            db.commit()
+            raise e
+
+        # === Final Step: Update status to COMPLETED ===
         meeting.status = MeetingStatus.COMPLETED
         db.commit()
         logger.info(f"Successfully processed meeting {meeting_id}. Status set to COMPLETED.")
@@ -56,6 +64,7 @@ def process_meeting_file(meeting_id: str):
         if meeting and meeting.status != MeetingStatus.FAILED:
             meeting.status = MeetingStatus.FAILED
             db.commit()
+            
     finally:
         db.close()
 
