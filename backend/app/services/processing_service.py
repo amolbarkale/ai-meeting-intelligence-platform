@@ -24,14 +24,18 @@ logger = logging.getLogger(__name__)
 def merge_transcription_and_diarization(transcription_df: pd.DataFrame, diarization) -> str:
     """
     Merges Whisper's transcription DataFrame with Pyannote's diarization results.
+    If diarization is None, all speakers are marked as UNKNOWN_SPEAKER.
     """
     final_transcript = ""
     for index, row in transcription_df.iterrows():
         # Find which speaker spoke during the middle of the segment
         segment_mid_point = row['start'] + (row['end'] - row['start']) / 2
         try:
-            # Get the speaker label for the segment's midpoint
-            speaker = diarization.crop(segment_mid_point).any_label()
+            if diarization is not None:
+                # Get the speaker label for the segment's midpoint
+                speaker = diarization.crop(segment_mid_point).any_label()
+            else:
+                speaker = "UNKNOWN_SPEAKER"
         except StopIteration:
             # If no speaker is active at the midpoint, label as unknown
             speaker = "UNKNOWN_SPEAKER"
@@ -44,8 +48,8 @@ def merge_transcription_and_diarization(transcription_df: pd.DataFrame, diarizat
     return final_transcript
 
 
-@celery_app.task(name="process_meeting_file")
-def process_meeting_file(meeting_id: str):
+@celery_app.task(name="process_meeting_file", bind=True, autoretry_for=(Exception,), retry_kwargs={'max_retries': 3, 'countdown': 60})
+def process_meeting_file(self, meeting_id: str):
     """
     The main Celery task that orchestrates the entire AI pipeline:
     1. Preprocesses the audio file.

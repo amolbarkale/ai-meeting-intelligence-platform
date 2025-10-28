@@ -20,13 +20,6 @@ class Meeting(Base):
     status = Column(SQLEnum(MeetingStatus), nullable=False, default=MeetingStatus.PENDING)
     
     transcript = Column(String, nullable=True)
-    summary = Column(String, nullable=True) # Will now store the abstract summary
-    
-    key_points = Column(String, nullable=True)
-    action_items = Column(String, nullable=True)
-    sentiment = Column(String, nullable=True)
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    transcript = Column(String, nullable=True)
     summary = Column(String, nullable=True)
     key_points = Column(String, nullable=True)
     action_items = Column(String, nullable=True)

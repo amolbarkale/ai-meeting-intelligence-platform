@@ -13,6 +13,9 @@ router = APIRouter()
 UPLOAD_DIRECTORY = "uploads"
 os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
 
+ALLOWED_EXTENSIONS = {".mp4", ".mp3", ".wav", ".m4a", ".avi", ".mov", ".mkv"}
+MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+
 @router.post("/upload", response_model=schemas.MeetingResponse, status_code=202)
 def upload_meeting_file(
     file: UploadFile = File(...),
@@ -22,9 +25,29 @@ def upload_meeting_file(
     Upload an audio/video file for processing.
     The file is saved and a background task is triggered.
     """
+
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename provided")
+    
+    file_extension = os.path.splitext(file.filename)[1].lower()
+    if file_extension not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"File type {file_extension} not allowed. Supported: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
+    file.file.seek(0, 2)  # Seek to end
+    file_size = file.file.tell()
+    file.file.seek(0)  # Reset to beginning
+    
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"File too large. Max size: {MAX_FILE_SIZE // (1024*1024)}MB"
+        )
+    
     # Generate a unique filename to avoid conflicts
-    file_extension = file.filename.split('.')[-1]
-    saved_filename = f"{uuid.uuid4()}.{file_extension}"
+    saved_filename = f"{uuid.uuid4()}{file_extension}"
     file_path = os.path.join(UPLOAD_DIRECTORY, saved_filename)
 
     # Save the uploaded file
