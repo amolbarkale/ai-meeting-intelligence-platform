@@ -1,9 +1,11 @@
 import os
+import io
 import subprocess
 import ffmpeg
 import logging
 from tempfile import NamedTemporaryFile
 from app.core.config import settings
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -45,21 +47,25 @@ def transcribe_audio_file(input_file_path: str) -> str:
 
     # --- Transcription with whisper.cpp (from Solution 2) ---
     try:
-        logger.info("Running whisper.cpp transcription...")
+        logger.info("Running whisper.cpp transcription with timestamps...")
         command = [
             settings.WHISPER_CPP_PATH,
             "-m", settings.WHISPER_CPP_MODEL_PATH,
             "-f", temp_wav_path,
-            "-otxt", # Output as plain text
-            "-nt" # No timestamps
+            "-otsv",  # Output as TSV (tab-separated values) with timestamps
+            "-nt"
         ]
         
-        # The result will be printed to stdout
         result = subprocess.run(command, check=True, capture_output=True, text=True)
-        transcript = result.stdout.strip()
+        
+        tsv_data = io.StringIO(result.stdout)
+        df = pd.read_csv(tsv_data, sep='\t')
+        # Convert start/end times from milliseconds to seconds
+        df['start'] = df['start'] / 1000.0
+        df['end'] = df['end'] / 1000.0
         
         logger.info("Transcription completed successfully.")
-        return transcript
+        return df
 
     except subprocess.CalledProcessError as e:
         logger.error(f"whisper.cpp failed with exit code {e.returncode}")
