@@ -63,3 +63,40 @@ Your answer should be concise and no more than three paragraphs.
 {transcript}
 </transcript>
 """
+
+topic_modeling_prompt = """
+You are an expert at identifying the core themes of a conversation.
+Read the following meeting transcript and generate 3 to 5 relevant topic tags.
+These tags should be concise and representative of the main subjects discussed.
+Examples of good tags include: "Quarterly Review", "Project Brainstorm", "Client Call", "Marketing Strategy", "Budget Planning".
+
+Output ONLY a single line of comma-separated tags.
+
+<transcript>
+{transcript}
+</transcript>
+"""
+
+knowledge_graph_prompt = """
+You are an expert in knowledge graph extraction.
+Your task is to analyze the meeting transcript and identify the key entities and their relationships.
+- **Nodes:** Identify the main concepts, projects, people, or decisions. These are your 'nodes'.
+- **Edges:** Describe the relationships between these nodes (e.g., "discusses", "is responsible for", "is a part of"). These are your 'edges'.
+
+You must output ONLY a valid JSON object with a 'nodes' key and an 'edges' key. Do not include any other text or explanation.
+
+The JSON schema should be:
+{{
+  "nodes": [
+    {{"id": "node_name_1", "label": "Node Label 1"}},
+    {{"id": "node_name_2", "label": "Node Label 2"}}
+  ],
+  "edges": [
+    {{"from": "node_name_1", "to": "node_name_2", "label": "relationship"}}
+  ]
+}}
+
+<transcript>
+{transcript}
+</transcript>
+"""

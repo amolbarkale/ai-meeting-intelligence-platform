@@ -29,6 +29,8 @@ class MeetingDetailsResponse(MeetingResponse):
     key_points: Optional[str] = None
     action_items: Optional[str] = None
     sentiment: Optional[str] = None
+    tags: Optional[str] = None
+    knowledge_graph: Optional[str] = None
 
     class Config:
         from_attributes = True

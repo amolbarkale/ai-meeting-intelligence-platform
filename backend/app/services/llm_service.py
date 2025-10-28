@@ -63,4 +63,27 @@ def generate_meeting_insights(transcript: str) -> dict:
         insights['sentiment_analysis'] = "Error: Could not generate sentiment analysis."
 
     logger.info("All insights generated successfully.")
+    
+    # --- 5. NEW: Topic Modeling (Tags) ---
+    try:
+        logger.info("Generating topic tags...")
+        prompt = PromptTemplate(template=prompts.topic_modeling_prompt, input_variables=["transcript"])
+        chain = LLMChain(llm=llm, prompt=prompt)
+        insights['tags'] = chain.run(transcript=transcript)
+    except Exception as e:
+        logger.error(f"Error generating topic tags: {e}")
+        insights['tags'] = "Error: Could not generate tags."
+
+    # --- 6. NEW: Knowledge Graph ---
+    try:
+        logger.info("Generating knowledge graph data...")
+        prompt = PromptTemplate(template=prompts.knowledge_graph_prompt, input_variables=["transcript"])
+        chain = LLMChain(llm=llm, prompt=prompt)
+        insights['knowledge_graph'] = chain.run(transcript=transcript)
+    except Exception as e:
+        logger.error(f"Error generating knowledge graph: {e}")
+        insights['knowledge_graph'] = '{"nodes": [], "edges": []}' # Default to empty graph on error
+
+    logger.info("All insights generated successfully.")
+    
     return insights

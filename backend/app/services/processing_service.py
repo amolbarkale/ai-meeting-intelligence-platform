@@ -103,6 +103,9 @@ def process_meeting_file(meeting_id: str):
         meeting.key_points = insights.get('key_points')
         meeting.action_items = insights.get('action_items')
         meeting.sentiment = insights.get('sentiment_analysis')
+        meeting.tags = insights.get('tags')
+        meeting.knowledge_graph = insights.get('knowledge_graph')
+
         db.commit()
         logger.info(f"Successfully generated AI insights for meeting {meeting_id}")
 

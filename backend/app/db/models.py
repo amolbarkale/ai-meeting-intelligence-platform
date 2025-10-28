@@ -25,6 +25,13 @@ class Meeting(Base):
     key_points = Column(String, nullable=True)
     action_items = Column(String, nullable=True)
     sentiment = Column(String, nullable=True)
-    
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    transcript = Column(String, nullable=True)
+    summary = Column(String, nullable=True)
+    key_points = Column(String, nullable=True)
+    action_items = Column(String, nullable=True)
+    sentiment = Column(String, nullable=True)
+    tags = Column(String, nullable=True) # To store comma-separated tags
+    knowledge_graph = Column(String, nullable=True) # To store JSON as a string
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
