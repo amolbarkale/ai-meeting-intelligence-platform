@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 # This assumes the Celery worker will load this module.
 diarization_pipeline = None
 
-# Only initialize if HF_TOKEN is available
 if hasattr(settings, 'HF_TOKEN') and settings.HF_TOKEN and settings.HF_TOKEN.strip():
     try:
         logger.info("Initializing Pyannote speaker diarization pipeline...")
