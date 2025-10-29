@@ -6,7 +6,7 @@ Transform your post-meeting workflow with intelligent audio/video processing, au
 
 > 📋 **[Technical Documentation](docs/technical-overview.md)** - Comprehensive architecture analysis, AI pipeline implementation, and engineering challenges
 
-![AI Meeting Intelligence Platform](docs/images/dashboard-screenshot.png)
+![AI Meeting Intelligence Platform](docs/images/architecture-diagram.png)
 *Screenshot of the AI Meeting Intelligence Platform dashboard*
 
 ## ✨ Key Features
@@ -29,11 +29,11 @@ Transform your post-meeting workflow with intelligent audio/video processing, au
 | **Database** | ![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-1C1C1C?style=for-the-badge&logo=sqlalchemy&logoColor=white) | Lightweight relational database with ORM |
 | **Task Queue** | ![Celery](https://img.shields.io/badge/Celery-37814A?style=for-the-badge&logo=celery&logoColor=white) ![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white) | Asynchronous task processing |
 | **AI/ML** | ![Whisper](https://img.shields.io/badge/Whisper-FF6B6B?style=for-the-badge&logo=openai&logoColor=white) ![Pyannote](https://img.shields.io/badge/Pyannote-FF6B6B?style=for-the-badge&logo=pytorch&logoColor=white) ![Ollama](https://img.shields.io/badge/Ollama-000000?style=for-the-badge&logo=ollama&logoColor=white) | Speech-to-text, speaker diarization, LLM |
+| **Media Processing** | ![FFmpeg](https://img.shields.io/badge/FFmpeg-000000?style=for-the-badge&logo=ffmpeg&logoColor=white) | Audio/video conversion and preprocessing |
 | **Vector DB** | ![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6B6B?style=for-the-badge&logo=chromadb&logoColor=white) ![LangChain](https://img.shields.io/badge/LangChain-FF6B6B?style=for-the-badge&logo=langchain&logoColor=white) | Vector storage and LLM orchestration |
-| **Infrastructure** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![FFmpeg](https://img.shields.io/badge/FFmpeg-000000?style=for-the-badge&logo=ffmpeg&logoColor=white) | Containerization and media processing |
+| **Infrastructure** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) | Containerization and deployment |
 
-![Architecture Overview](docs/images/architecture-diagram.png)
-*System architecture and data flow diagram*
+![Architecture Overview](docs/images/dashboard-screenshot.png) 
 
 ## 📁 Project Structure
 
@@ -57,7 +57,7 @@ AI-Meeting-Intelligence-Platform/
 ```
 
 
-## Quick Start (TL;DR)
+## Quick Start
 ```bash
 # 1) Start Redis (Docker)
 docker run -d -p 6379:6379 redis
