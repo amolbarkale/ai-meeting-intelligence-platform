@@ -1,13 +1,61 @@
-# AI Meeting Intelligence Platform
+# 🚀 AI Meeting Intelligence Platform
 
-Process pre-recorded meeting audio/video to generate high-quality transcripts, summaries, insights, and searchable knowledge.
+**An open-source web application that transforms meeting recordings into actionable insights, comprehensive summaries, and searchable knowledge using cutting-edge AI technologies.**
+
+Transform your post-meeting workflow with intelligent audio/video processing, automated transcription, speaker identification, and AI-powered analysis that extracts key decisions, action items, and sentiment from your meetings.
 
 > 📋 **[Technical Documentation](docs/technical-overview.md)** - Comprehensive architecture analysis, AI pipeline implementation, and engineering challenges
 
-## Tech Stack
-- Backend: FastAPI, Celery, Redis, SQLAlchemy (SQLite)
-- AI: Whisper.cpp (transcription), Pyannote (diarization), FFmpeg, Ollama/OpenAI (LLM), Chroma (vector search)
-- Frontend: React + Tailwind (Next.js)
+![AI Meeting Intelligence Platform](docs/images/dashboard-screenshot.png)
+*Screenshot of the AI Meeting Intelligence Platform dashboard*
+
+## ✨ Key Features
+
+*   **🎯 Intelligent Audio/Video Processing** - Support for multiple formats (MP4, WAV, MP3, AVI, MOV, MKV) with robust file validation
+*   **🎙️ High-Fidelity Transcription** - Whisper.cpp-powered speech-to-text with speaker diarization using Pyannote.audio
+*   **🤖 AI-Powered Summarization** - Generate comprehensive summaries, key points, and action items using Ollama/OpenAI LLMs
+*   **💭 Sentiment Analysis** - Analyze emotional tone and highlight contentious or positive moments
+*   **🔍 Vector Search & Knowledge Base** - ChromaDB-powered semantic search across all meeting content
+*   **📊 Real-time Processing** - Asynchronous task processing with Celery and Redis for scalable performance
+*   **🎨 Modern UI/UX** - React (Next.js) frontend with Tailwind CSS and Shadcn UI components
+*   **🛡️ Production Ready** - Health checks, error handling, retry mechanisms, and graceful degradation
+
+## 🛠️ Technology Stack
+
+| **Category** | **Technology** | **Purpose** |
+|:-------------|:---------------|:------------|
+| **Frontend** | ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB) ![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white) | Modern web framework with utility-first CSS |
+| **Backend** | ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=FastAPI&logoColor=white) | High-performance async web framework |
+| **Database** | ![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-1C1C1C?style=for-the-badge&logo=sqlalchemy&logoColor=white) | Lightweight relational database with ORM |
+| **Task Queue** | ![Celery](https://img.shields.io/badge/Celery-37814A?style=for-the-badge&logo=celery&logoColor=white) ![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white) | Asynchronous task processing |
+| **AI/ML** | ![Whisper](https://img.shields.io/badge/Whisper-FF6B6B?style=for-the-badge&logo=openai&logoColor=white) ![Pyannote](https://img.shields.io/badge/Pyannote-FF6B6B?style=for-the-badge&logo=pytorch&logoColor=white) ![Ollama](https://img.shields.io/badge/Ollama-000000?style=for-the-badge&logo=ollama&logoColor=white) | Speech-to-text, speaker diarization, LLM |
+| **Vector DB** | ![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6B6B?style=for-the-badge&logo=chromadb&logoColor=white) ![LangChain](https://img.shields.io/badge/LangChain-FF6B6B?style=for-the-badge&logo=langchain&logoColor=white) | Vector storage and LLM orchestration |
+| **Infrastructure** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) ![FFmpeg](https://img.shields.io/badge/FFmpeg-000000?style=for-the-badge&logo=ffmpeg&logoColor=white) | Containerization and media processing |
+
+![Architecture Overview](docs/images/architecture-diagram.png)
+*System architecture and data flow diagram*
+
+## 📁 Project Structure
+
+```
+AI-Meeting-Intelligence-Platform/
+├── 📁 backend/                    # FastAPI backend services
+│   ├── 📁 app/                    # Main application code
+│   │   ├── 📁 api/               # REST API endpoints
+│   │   ├── 📁 services/          # Core business logic
+│   │   └── 📁 db/                # Database models & config
+│   ├── 📁 uploads/               # Processed meeting files
+│   └── 📁 whisper.cpp/           # Local Whisper installation
+├── 📁 frontend/                   # Next.js React frontend
+│   ├── 📁 app/                    # Next.js app router
+│   ├── 📁 components/             # Reusable UI components
+│   └── 📁 lib/                   # API client & hooks
+├── 📁 docs/                      # Documentation
+│   ├── 📁 images/                # Project screenshots & diagrams
+│   └── 📄 technical-overview.md  # Detailed technical documentation
+└── 📄 README.md                  # This file
+```
+
 
 ## Quick Start (TL;DR)
 ```bash
