@@ -4,8 +4,6 @@
 
 Transform your post-meeting workflow with intelligent audio/video processing, automated transcription, speaker identification, and AI-powered analysis that extracts key decisions, action items, and sentiment from your meetings.
 
-> 📋 **[Technical Documentation](docs/technical-overview.md)** - Comprehensive architecture analysis, AI pipeline implementation, and engineering challenges
-
 ![AI Meeting Intelligence Platform](docs/images/architecture-diagram.png)
 *Screenshot of the AI Meeting Intelligence Platform dashboard*
 
@@ -33,7 +31,7 @@ Transform your post-meeting workflow with intelligent audio/video processing, au
 | **Vector DB** | ![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6B6B?style=for-the-badge&logo=chromadb&logoColor=white) ![LangChain](https://img.shields.io/badge/LangChain-FF6B6B?style=for-the-badge&logo=langchain&logoColor=white) | Vector storage and LLM orchestration |
 | **Infrastructure** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) | Containerization and deployment |
 
-![Architecture Overview](docs/images/dashboard-screenshot.png) 
+> 📋 **[Technical Documentation](docs/technical-overview.md)** - Comprehensive architecture analysis, AI pipeline implementation, and engineering challenges
 
 ## 📁 Project Structure
 
