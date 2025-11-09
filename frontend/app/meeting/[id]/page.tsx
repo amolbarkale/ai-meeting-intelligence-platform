@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, ArrowLeft, AlertCircle, CheckCircle, Clock, XCircle } from "lucide-react"
-import { useMeetingDetails, useMeetingStatus } from "@/lib/hooks"
+import { useMeetingDetails, useMeetingStatus, useMeetingGraphContext } from "@/lib/hooks"
 import ChatBox from "@/components/chat-box"
 
 export default function MeetingDetailPage() {
@@ -15,6 +15,7 @@ export default function MeetingDetailPage() {
 
   const { meeting, isLoading, error, refetch } = useMeetingDetails(meetingId)
   const { status } = useMeetingStatus(meetingId)
+  const { context: graphContext, isLoading: graphLoading, error: graphError } = useMeetingGraphContext(meetingId)
   const currentStatus = status?.status || meeting?.status
 
   useEffect(() => {
@@ -181,6 +182,97 @@ export default function MeetingDetailPage() {
 
         {isCompleted && (
           <div className="space-y-8">
+            {graphLoading && (
+              <Card>
+                <CardContent className="py-6 flex items-center gap-3 text-slate-600">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Loading knowledge graph context…</span>
+                </CardContent>
+              </Card>
+            )}
+
+            {graphError && (
+              <Card>
+                <CardContent className="py-6 flex items-center gap-3 text-red-600">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{graphError}</span>
+                </CardContent>
+              </Card>
+            )}
+
+            {graphContext && (
+              <Card>
+                <CardHeader>
+                  <h2 className="text-xl font-semibold text-slate-900">Knowledge Graph Highlights</h2>
+                  <p className="text-sm text-slate-500">
+                    Participants, decisions, and timeline events extracted from the meeting graph.
+                  </p>
+                </CardHeader>
+                <CardContent className="grid gap-6 md:grid-cols-2">
+                  {graphContext.participants.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-700 mb-2">Participants</h3>
+                      <ul className="space-y-1 text-sm text-slate-600">
+                        {graphContext.participants.map((participant) => (
+                          <li key={participant.id ?? participant.name}>
+                            <span className="font-medium text-slate-700">{participant.name}</span>
+                            {participant.role && <span className="ml-1">({participant.role})</span>}
+                            {participant.organization && <span className="ml-1 text-slate-500">· {participant.organization}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {graphContext.decisions.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-700 mb-2">Decisions</h3>
+                      <ul className="space-y-1 text-sm text-slate-600">
+                        {graphContext.decisions.map((decision) => (
+                          <li key={decision.id ?? decision.title}>
+                            <span className="font-medium text-slate-700">{decision.title}</span>
+                            {decision.owner && <span className="ml-1">· Owner: {decision.owner}</span>}
+                            {decision.due_date && <span className="ml-1">· Due: {decision.due_date}</span>}
+                            {decision.description && <p className="text-slate-500 text-xs">{decision.description}</p>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {graphContext.timeline.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-700 mb-2">Timeline Highlights</h3>
+                      <ul className="space-y-1 text-sm text-slate-600">
+                        {graphContext.timeline.map((entry) => (
+                          <li key={entry.id ?? entry.label}>
+                            <span className="font-medium text-slate-700">
+                              {entry.start_time ? `${entry.start_time} · ` : ""}
+                              {entry.label}
+                            </span>
+                            {entry.summary && <p className="text-slate-500 text-xs">{entry.summary}</p>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {graphContext.topics.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-700 mb-2">Topics</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {graphContext.topics.map((topic) => (
+                          <Badge key={topic} variant="secondary" className="bg-slate-200 text-slate-700">
+                            {topic}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Summary */}
             {meeting.summary && (
               <Card>

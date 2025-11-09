@@ -119,9 +119,15 @@ Tasks:
 - Adapt to the conversation style. For interviews, highlight interviewer ↔ candidate connections; for demos, capture product → feature → feedback; for brainstorming, map themes and responsibilities.
 
 Requirements:
-- Output ONLY a valid JSON object with 'nodes' and 'edges'. No commentary.
+- Output ONLY a valid JSON object. Include the following top-level keys when data exists:
+  - "nodes": array of node objects with `id` and `label`
+  - "edges": array of edge objects with `from`, `to`, `label`
+  - "participants": array of participant objects (`name`, optional `role`, `organization`)
+  - "decisions": array of decision objects (`title`, `description`, optional `owner`, `due_date`)
+  - "timeline": array of timeline entries (`label`, optional `start_time`, `summary`)
+  - "topics": array of major agenda or discussion topics (strings)
 - Use concise, machine-friendly IDs (lowercase, hyphen/underscore) and clear labels.
-- Skip empty sections; if no nodes/edges exist, return empty arrays.
+- Skip empty sections by returning empty arrays for those keys.
 
 Example schema:
 {{
@@ -147,13 +153,20 @@ Context:
 - **Original Filename:** {original_filename}
 - **Recorded On:** {created_at}
 - **Tags:** {tags}
+- **Primary Topics:** {topics}
+- **Participants:** 
+{participants}
 - **Summary:** 
 {summary}
 - **Key Points:** 
 {key_points}
 - **Action Items:** 
 {action_items}
-- **Structured Insights:** 
+- **Decisions:** 
+{decisions}
+- **Timeline Highlights:** 
+{timeline}
+- **Structured Concepts:** 
 {structured_concepts}
 
 Conversation history so far:

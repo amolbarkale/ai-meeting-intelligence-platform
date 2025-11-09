@@ -7,6 +7,7 @@ import {
   ApiError,
   ChatMessage,
   MeetingChatResponse,
+  GraphContextResponse,
 } from '@/lib/api'
 
 const ACTIVE_POLL_INTERVAL = 3000
@@ -280,6 +281,44 @@ export function useMeetingChat(meetingId: string | null) {
     error,
     sendMessage,
     resetChat,
+  }
+}
+
+export function useMeetingGraphContext(meetingId: string | null) {
+  const [context, setContext] = useState<GraphContextResponse | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchContext = useCallback(async () => {
+    if (!meetingId) {
+      setContext(null)
+      setError(null)
+      setIsLoading(false)
+      return
+    }
+    setIsLoading(true)
+    setError(null)
+    try {
+      const response = await api.getMeetingGraphContext(meetingId)
+      setContext(response)
+    } catch (err) {
+      const message = err instanceof ApiError ? err.message : 'Failed to load graph context'
+      setError(message)
+      setContext(null)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [meetingId])
+
+  useEffect(() => {
+    fetchContext()
+  }, [fetchContext])
+
+  return {
+    context,
+    isLoading,
+    error,
+    refresh: fetchContext,
   }
 }
 

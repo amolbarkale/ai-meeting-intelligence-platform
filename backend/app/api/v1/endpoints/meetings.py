@@ -29,6 +29,12 @@ ALLOWED_EXTENSIONS = {".mp4", ".mp3", ".wav", ".m4a", ".avi", ".mov", ".mkv"}
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
 
 
+def _split_tags(tags: Optional[str]) -> List[str]:
+    if not tags:
+        return []
+    return [tag.strip() for tag in tags.split(",") if tag.strip()]
+
+
 @router.get("", response_model=List[schemas.MeetingResponse])
 def list_meetings(
     limit: int = Query(20, ge=1, le=100, description="Maximum number of meetings to return"),
@@ -169,6 +175,70 @@ def upload_meeting_file(
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
+@router.get("/{meeting_id}/graph", response_model=schemas.GraphContextResponse)
+def get_meeting_graph_context(
+    meeting_id: uuid.UUID,
+    db: Session = Depends(database.get_db),
+):
+    meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+
+    context = fetch_meeting_context(str(meeting.id))
+    if not context:
+        try:
+            upsert_meeting_graph(
+                {
+                    "id": str(meeting.id),
+                    "original_filename": meeting.original_filename,
+                    "saved_filename": meeting.saved_filename,
+                    "created_at": meeting.created_at.isoformat() if meeting.created_at else None,
+                    "updated_at": meeting.updated_at.isoformat() if meeting.updated_at else None,
+                    "status": meeting.status.value if meeting.status else None,
+                    "summary": meeting.summary,
+                    "key_points": meeting.key_points,
+                    "action_items": meeting.action_items,
+                    "sentiment": meeting.sentiment,
+                    "tags": meeting.tags,
+                    "transcript": meeting.transcript,
+                    "knowledge_graph": meeting.knowledge_graph,
+                }
+            )
+            context = fetch_meeting_context(str(meeting.id))
+        except Exception as exc:
+            logger.error("Failed to sync meeting %s to graph: %s", meeting_id, exc, exc_info=True)
+            context = {}
+
+    if context is None:
+        raise HTTPException(status_code=404, detail="Graph context unavailable")
+
+    tag_list = context.get("tags") or _split_tags(meeting.tags)
+    title_candidate = context.get("title")
+    if not title_candidate and meeting.summary:
+        first_line = meeting.summary.splitlines()[0]
+        if first_line.startswith("#"):
+            title_candidate = first_line.lstrip("#").strip()
+
+    return schemas.GraphContextResponse(
+        meeting_id=meeting.id,
+        summary=context.get("summary") or meeting.summary,
+        key_points=meeting.key_points,
+        action_items=meeting.action_items,
+        sentiment=context.get("sentiment") or meeting.sentiment,
+        tags=tag_list or [],
+        topics=context.get("topics") or [],
+        participants=context.get("participants") or [],
+        decisions=context.get("decisions") or [],
+        timeline=context.get("timeline") or [],
+        key_points_structured=context.get("key_points_structured") or [],
+        action_items_structured=context.get("action_items_structured") or [],
+        concepts=context.get("concepts") or [],
+        created_at=meeting.created_at,
+        updated_at=meeting.updated_at,
+        title=title_candidate or meeting.original_filename,
+    )
+
+
 @router.get("/{meeting_id}/status", response_model=schemas.JobStatusResponse)
 def get_meeting_status(
     meeting_id: uuid.UUID,
@@ -246,11 +316,14 @@ def chat_about_meeting(
     context.setdefault("key_points_markdown", meeting.key_points)
     context.setdefault("action_items_markdown", meeting.action_items)
     context.setdefault("sentiment", meeting.sentiment)
-
-    tags_from_db = []
-    if meeting.tags:
-        tags_from_db = [tag.strip() for tag in meeting.tags.split(",") if tag.strip()]
-    context.setdefault("tags", context.get("tags") or tags_from_db)
+    context.setdefault("tags", context.get("tags") or _split_tags(meeting.tags))
+    context.setdefault("topics", context.get("topics") or [])
+    context.setdefault("participants", context.get("participants") or [])
+    context.setdefault("decisions", context.get("decisions") or [])
+    context.setdefault("timeline", context.get("timeline") or [])
+    context.setdefault("concepts", context.get("concepts") or [])
+    context.setdefault("key_points_structured", context.get("key_points_structured") or [])
+    context.setdefault("action_items_structured", context.get("action_items_structured") or [])
 
     if not context.get("title"):
         title_candidate = None
@@ -277,5 +350,9 @@ def chat_about_meeting(
             "title": context.get("title"),
             "tags": context.get("tags"),
             "created_at": context.get("created_at"),
+            "topics": context.get("topics"),
+            "participants": context.get("participants"),
+            "decisions": context.get("decisions"),
+            "timeline": context.get("timeline"),
         },
     )

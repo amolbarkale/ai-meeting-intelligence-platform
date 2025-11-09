@@ -25,6 +25,47 @@ export interface MeetingChatResponse {
   context: Record<string, any>
 }
 
+export interface GraphParticipant {
+  id?: string
+  name: string
+  role?: string | null
+  organization?: string | null
+}
+
+export interface GraphDecision {
+  id?: string
+  title: string
+  description?: string | null
+  owner?: string | null
+  due_date?: string | null
+}
+
+export interface GraphTimelineEntry {
+  id?: string
+  label: string
+  summary?: string | null
+  start_time?: string | null
+}
+
+export interface GraphContextResponse {
+  meeting_id: string
+  summary?: string | null
+  key_points?: string | null
+  action_items?: string | null
+  sentiment?: string | null
+  tags: string[]
+  topics: string[]
+  participants: GraphParticipant[]
+  decisions: GraphDecision[]
+  timeline: GraphTimelineEntry[]
+  key_points_structured: Array<Record<string, any>>
+  action_items_structured: Array<Record<string, any>>
+  concepts: string[]
+  created_at?: string | null
+  updated_at?: string | null
+  title?: string | null
+}
+
 export interface JobStatusResponse {
   meeting_id: string
   status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
@@ -139,6 +180,11 @@ export const api = {
       body: JSON.stringify(payload),
     })
     return handleResponse<MeetingChatResponse>(response)
+  },
+
+  async getMeetingGraphContext(meetingId: string): Promise<GraphContextResponse> {
+    const response = await fetch(`${API_BASE_URL}/meetings/${meetingId}/graph`)
+    return handleResponse<GraphContextResponse>(response)
   },
 }
 
