@@ -107,32 +107,32 @@ def upload_meeting_file(
                 detail=f"File too large. Max size: {MAX_FILE_SIZE // (1024*1024)}MB"
             )
         
-    # Generate a unique filename to avoid conflicts
+        # Generate a unique filename to avoid conflicts
         saved_filename = f"{uuid.uuid4()}{file_extension}"
-    file_path = os.path.join(UPLOAD_DIRECTORY, saved_filename)
+        file_path = os.path.join(UPLOAD_DIRECTORY, saved_filename)
         
         logger.info(f"Saving file to: {file_path}")
 
-    # Save the uploaded file
-    try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-            logger.info(f"File saved successfully: {file_path}")
-    except Exception as e:
-            logger.error(f"Failed to save file: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
-
-    # Create a new meeting record in the database
+        # Save the uploaded file
         try:
-    new_meeting = models.Meeting(
-        original_filename=file.filename,
-        saved_filename=saved_filename,
-        file_path=file_path,
-        status=models.MeetingStatus.PENDING
-    )
-    db.add(new_meeting)
-    db.commit()
-    db.refresh(new_meeting)
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+                logger.info(f"File saved successfully: {file_path}")
+        except Exception as e:
+            logger.error(f"Failed to save file: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
+
+        # Create a new meeting record in the database
+        try:
+            new_meeting = models.Meeting(
+                original_filename=file.filename,
+                saved_filename=saved_filename,
+                file_path=file_path,
+                status=models.MeetingStatus.PENDING
+            )
+            db.add(new_meeting)
+            db.commit()
+            db.refresh(new_meeting)
             logger.info(f"Created meeting record with id: {new_meeting.id}")
         except Exception as e:
             logger.error(f"Failed to create meeting record: {e}", exc_info=True)
@@ -141,7 +141,7 @@ def upload_meeting_file(
                 os.remove(file_path)
             raise HTTPException(status_code=500, detail=f"Failed to create meeting record: {e}")
 
-    # Trigger the background processing task
+        # Trigger the background processing task
         try:
             logger.info(f"Queuing processing task for meeting {new_meeting.id}")
             # Use delay() which should return immediately even if worker is not running
@@ -166,7 +166,7 @@ def upload_meeting_file(
             )
 
         logger.info(f"Upload completed successfully for meeting {new_meeting.id}")
-    return new_meeting
+        return new_meeting
         
     except HTTPException:
         raise
