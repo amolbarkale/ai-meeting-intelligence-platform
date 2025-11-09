@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, ArrowLeft, AlertCircle, CheckCircle, Clock, XCircle } from "lucide-react"
 import { useMeetingDetails, useMeetingStatus } from "@/lib/hooks"
+import ChatBox from "@/components/chat-box"
 
 export default function MeetingDetailPage() {
   const params = useParams()
@@ -47,8 +48,8 @@ export default function MeetingDetailPage() {
         return 'bg-blue-100 text-blue-800'
       default:
         return 'bg-yellow-100 text-yellow-800'
+      }
     }
-  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -116,10 +117,10 @@ export default function MeetingDetailPage() {
           <div className="flex items-start justify-between mb-4">
             <div>
               <h1 className="text-3xl font-bold text-slate-900 mb-2">{meeting.original_filename}</h1>
-              <p className="text-slate-600">
+          <p className="text-slate-600">
                 Uploaded {formatDate(meeting.created_at)}
-              </p>
-            </div>
+          </p>
+        </div>
             <div className="flex items-center gap-2">
               {getStatusIcon()}
               <Badge className={getStatusColor()}>
@@ -167,12 +168,12 @@ export default function MeetingDetailPage() {
                 <p className="text-slate-600 mb-4">
                   There was an error processing your meeting. Please try uploading again.
                 </p>
-                <button
+            <button
                   onClick={() => router.push("/")}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
                   Upload Another Meeting
-                </button>
+            </button>
               </div>
             </CardContent>
           </Card>
@@ -259,7 +260,7 @@ export default function MeetingDetailPage() {
                     <pre className="text-sm text-slate-700 whitespace-pre-wrap font-mono">
                       {meeting.transcript}
                     </pre>
-                  </div>
+        </div>
                 </CardContent>
               </Card>
             )}
@@ -277,9 +278,11 @@ export default function MeetingDetailPage() {
                 </CardContent>
               </Card>
             )}
-          </div>
+        </div>
         )}
       </div>
+
+      <ChatBox meetingId={meetingId} />
     </main>
   )
 }

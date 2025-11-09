@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 from app.db import models, database
 from app.api.v1 import schemas
 from app.services.processing_service import process_meeting_file
+from app.services.graph_service import fetch_meeting_context, upsert_meeting_graph
+from app.services.llm_service import generate_meeting_chat_response
 from kombu.exceptions import OperationalError
 
 logger = logging.getLogger(__name__)
@@ -40,6 +42,28 @@ def list_meetings(
         query = query.filter(models.Meeting.status == status)
 
     meetings = query.limit(limit).all()
+
+    for meeting in meetings:
+        try:
+            upsert_meeting_graph(
+                {
+                    "id": str(meeting.id),
+                    "original_filename": meeting.original_filename,
+                    "saved_filename": meeting.saved_filename,
+                    "created_at": meeting.created_at.isoformat() if meeting.created_at else None,
+                    "updated_at": meeting.updated_at.isoformat() if meeting.updated_at else None,
+                    "status": meeting.status.value if meeting.status else None,
+                    "summary": meeting.summary,
+                    "key_points": meeting.key_points,
+                    "action_items": meeting.action_items,
+                    "sentiment": meeting.sentiment,
+                    "tags": meeting.tags,
+                    "transcript": meeting.transcript,
+                    "knowledge_graph": meeting.knowledge_graph,
+                }
+            )
+        except Exception as sync_exc:
+            logger.debug("Skipping graph sync for meeting %s: %s", meeting.id, sync_exc)
     return meetings
 
 
@@ -77,32 +101,32 @@ def upload_meeting_file(
                 detail=f"File too large. Max size: {MAX_FILE_SIZE // (1024*1024)}MB"
             )
         
-        # Generate a unique filename to avoid conflicts
+    # Generate a unique filename to avoid conflicts
         saved_filename = f"{uuid.uuid4()}{file_extension}"
-        file_path = os.path.join(UPLOAD_DIRECTORY, saved_filename)
+    file_path = os.path.join(UPLOAD_DIRECTORY, saved_filename)
         
         logger.info(f"Saving file to: {file_path}")
 
-        # Save the uploaded file
-        try:
-            with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
+    # Save the uploaded file
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
             logger.info(f"File saved successfully: {file_path}")
-        except Exception as e:
+    except Exception as e:
             logger.error(f"Failed to save file: {e}", exc_info=True)
-            raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
 
-        # Create a new meeting record in the database
+    # Create a new meeting record in the database
         try:
-            new_meeting = models.Meeting(
-                original_filename=file.filename,
-                saved_filename=saved_filename,
-                file_path=file_path,
-                status=models.MeetingStatus.PENDING
-            )
-            db.add(new_meeting)
-            db.commit()
-            db.refresh(new_meeting)
+    new_meeting = models.Meeting(
+        original_filename=file.filename,
+        saved_filename=saved_filename,
+        file_path=file_path,
+        status=models.MeetingStatus.PENDING
+    )
+    db.add(new_meeting)
+    db.commit()
+    db.refresh(new_meeting)
             logger.info(f"Created meeting record with id: {new_meeting.id}")
         except Exception as e:
             logger.error(f"Failed to create meeting record: {e}", exc_info=True)
@@ -111,7 +135,7 @@ def upload_meeting_file(
                 os.remove(file_path)
             raise HTTPException(status_code=500, detail=f"Failed to create meeting record: {e}")
 
-        # Trigger the background processing task
+    # Trigger the background processing task
         try:
             logger.info(f"Queuing processing task for meeting {new_meeting.id}")
             # Use delay() which should return immediately even if worker is not running
@@ -136,7 +160,7 @@ def upload_meeting_file(
             )
 
         logger.info(f"Upload completed successfully for meeting {new_meeting.id}")
-        return new_meeting
+    return new_meeting
         
     except HTTPException:
         raise
@@ -176,3 +200,82 @@ def get_meeting_details(
         raise HTTPException(status_code=404, detail="Meeting not found")
 
     return meeting
+
+
+@router.post("/{meeting_id}/chat", response_model=schemas.MeetingChatResponse)
+def chat_about_meeting(
+    meeting_id: uuid.UUID,
+    payload: schemas.MeetingChatRequest,
+    db: Session = Depends(database.get_db),
+):
+    meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+
+    context = fetch_meeting_context(str(meeting.id))
+    if not context:
+        try:
+            upsert_meeting_graph(
+                {
+                    "id": str(meeting.id),
+                    "original_filename": meeting.original_filename,
+                    "saved_filename": meeting.saved_filename,
+                    "created_at": meeting.created_at.isoformat() if meeting.created_at else None,
+                    "updated_at": meeting.updated_at.isoformat() if meeting.updated_at else None,
+                    "status": meeting.status.value if meeting.status else None,
+                    "summary": meeting.summary,
+                    "key_points": meeting.key_points,
+                    "action_items": meeting.action_items,
+                    "sentiment": meeting.sentiment,
+                    "tags": meeting.tags,
+                    "transcript": meeting.transcript,
+                    "knowledge_graph": meeting.knowledge_graph,
+                }
+            )
+            context = fetch_meeting_context(str(meeting.id))
+        except Exception as exc:
+            logger.error("Failed to sync meeting %s to graph: %s", meeting_id, exc, exc_info=True)
+            context = {}
+    else:
+        context = context or {}
+
+    # Merge SQL context to ensure we have fallbacks
+    context.setdefault("original_filename", meeting.original_filename)
+    context.setdefault("created_at", meeting.created_at.isoformat() if meeting.created_at else None)
+    context.setdefault("summary", meeting.summary)
+    context.setdefault("key_points_markdown", meeting.key_points)
+    context.setdefault("action_items_markdown", meeting.action_items)
+    context.setdefault("sentiment", meeting.sentiment)
+
+    tags_from_db = []
+    if meeting.tags:
+        tags_from_db = [tag.strip() for tag in meeting.tags.split(",") if tag.strip()]
+    context.setdefault("tags", context.get("tags") or tags_from_db)
+
+    if not context.get("title"):
+        title_candidate = None
+        if meeting.summary:
+            first_line = meeting.summary.splitlines()[0]
+            if first_line.startswith("#"):
+                title_candidate = first_line.lstrip("#").strip()
+        context["title"] = title_candidate or meeting.original_filename
+
+    try:
+        reply = generate_meeting_chat_response(
+            question=payload.message,
+            meeting_context=context,
+            history=[msg.model_dump() for msg in payload.history] if payload.history else [],
+        )
+    except Exception as exc:
+        logger.error("Failed to generate chat response for meeting %s: %s", meeting_id, exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to generate chat response")
+
+    return schemas.MeetingChatResponse(
+        meeting_id=meeting.id,
+        reply=reply,
+        context={
+            "title": context.get("title"),
+            "tags": context.get("tags"),
+            "created_at": context.get("created_at"),
+        },
+    )

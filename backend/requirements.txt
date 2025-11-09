@@ -24,7 +24,7 @@ requests==2.31.0
 # For processing transcription results
 pandas==2.2.2
 
-# For Vector DB and Embeddings
-chromadb==0.5.0
+# For LLM integrations
 langchain-openai
-langchain-chroma>=0.1.2
+# Graph database integration
+neo4j>=5.21.0

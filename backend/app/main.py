@@ -8,6 +8,7 @@ import redis
 import logging
 from sqlalchemy import text
 from app.core.config import settings
+from app.services.graph_service import check_connection as check_neo4j_connection
 
 # Configure logging
 logging.basicConfig(
@@ -95,8 +96,17 @@ def readiness_check():
     except Exception as e:
         checks["deepgram"] = f"error: {str(e)}"
     
+    # Check Neo4j
+    try:
+        if check_neo4j_connection():
+            checks["neo4j"] = "ok"
+        else:
+            checks["neo4j"] = "error: cannot connect to Neo4j"
+    except Exception as e:
+        checks["neo4j"] = f"error: {str(e)}"
+
     # Check if all critical services are ok
-    critical_services = ["database", "redis", "ffmpeg", "deepgram"]
+    critical_services = ["database", "redis", "ffmpeg", "deepgram", "neo4j"]
     all_ok = all(checks.get(service, "").startswith("error") == False for service in critical_services)
     
     if not all_ok:

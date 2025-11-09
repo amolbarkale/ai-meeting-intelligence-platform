@@ -9,6 +9,22 @@ export interface MeetingResponse {
   updated_at?: string
 }
 
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface MeetingChatRequest {
+  message: string
+  history?: ChatMessage[]
+}
+
+export interface MeetingChatResponse {
+  meeting_id: string
+  reply: string
+  context: Record<string, any>
+}
+
 export interface JobStatusResponse {
   meeting_id: string
   status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
@@ -112,7 +128,18 @@ export const api = {
   async readinessCheck(): Promise<{ status: string; checks: Record<string, string> }> {
     const response = await fetch(`${API_BASE_URL.replace('/api/v1', '')}/ready`)
     return handleResponse<{ status: string; checks: Record<string, string> }>(response)
-  }
+  },
+
+  async chatWithMeeting(meetingId: string, payload: MeetingChatRequest): Promise<MeetingChatResponse> {
+    const response = await fetch(`${API_BASE_URL}/meetings/${meetingId}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
+    return handleResponse<MeetingChatResponse>(response)
+  },
 }
 
 export { ApiError }

@@ -1,9 +1,8 @@
 import uuid
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Literal
 from pydantic import BaseModel
 from datetime import datetime
 from app.db.models import MeetingStatus
-from typing import Optional
 
 class MeetingBase(BaseModel):
     original_filename: str
@@ -34,6 +33,19 @@ class MeetingDetailsResponse(MeetingResponse):
 
     class Config:
         from_attributes = True
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+
+class MeetingChatRequest(BaseModel):
+    message: str
+    history: List[ChatMessage] = []
+
+class MeetingChatResponse(BaseModel):
+    meeting_id: uuid.UUID
+    reply: str
+    context: Dict[str, Any]
 
 class SearchResult(BaseModel):
     content: str

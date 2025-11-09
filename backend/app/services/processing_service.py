@@ -9,7 +9,7 @@ from app.core.celery_app import celery_app
 
 from .transcription_service import transcribe_audio_file, merge_transcription_and_diarization
 from .llm_service import generate_meeting_insights
-from .vector_db_service import add_transcript_to_db
+from .graph_service import upsert_meeting_graph
 
 
 logging.basicConfig(level=logging.INFO)
@@ -28,7 +28,7 @@ def process_meeting_file(self, meeting_id: str):
     1. Transcribes audio with Deepgram API (includes diarization)
     2. Formats transcript with speaker labels
     3. Generates AI insights from the final transcript
-    4. (Placeholder) Stores results in future knowledge base
+    4. Stores structured insights in the Neo4j knowledge graph
     """
     logger.info(f"Starting AI pipeline for meeting_id: {meeting_id}")
 
@@ -71,10 +71,32 @@ def process_meeting_file(self, meeting_id: str):
         db.commit()
         logger.info(f"Successfully generated AI insights for meeting {meeting_id}")
 
-        # --- Step 4: Add to Knowledge Base ---
-        # TODO: Replace ChromaDB with graph DB
-        # add_transcript_to_db(str(meeting.id), meeting.transcript)
-        logger.info("Skipping vector DB storage - will be replaced with graph DB")
+        # --- Step 4: Persist to knowledge graph ---
+        try:
+            upsert_meeting_graph(
+                {
+                    "id": str(meeting.id),
+                    "original_filename": meeting.original_filename,
+                    "saved_filename": meeting.saved_filename,
+                    "created_at": meeting.created_at.isoformat() if meeting.created_at else None,
+                    "updated_at": meeting.updated_at.isoformat() if meeting.updated_at else None,
+                    "status": meeting.status.value if meeting.status else None,
+                    "summary": meeting.summary,
+                    "key_points": meeting.key_points,
+                    "action_items": meeting.action_items,
+                    "sentiment": meeting.sentiment,
+                    "tags": meeting.tags,
+                    "transcript": meeting.transcript,
+                    "knowledge_graph": meeting.knowledge_graph,
+                }
+            )
+            logger.info("Synced meeting %s to Neo4j graph", meeting_id)
+        except Exception as graph_exc:
+            logger.error(
+                "Failed to persist meeting %s to Neo4j graph: %s",
+                meeting_id,
+                graph_exc,
+            )
 
         # --- Final Step: Mark as COMPLETED ---
         meeting.status = MeetingStatus.COMPLETED

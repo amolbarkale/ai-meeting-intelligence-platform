@@ -1,8 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { api, MeetingResponse, MeetingDetailsResponse, JobStatusResponse, ApiError } from '@/lib/api'
+import {
+  api,
+  MeetingResponse,
+  MeetingDetailsResponse,
+  JobStatusResponse,
+  ApiError,
+  ChatMessage,
+  MeetingChatResponse,
+} from '@/lib/api'
 
 const ACTIVE_POLL_INTERVAL = 3000
 const IDLE_POLL_INTERVAL = 10000
+
+export interface MeetingChatTurn extends ChatMessage {
+  id: string
+}
 
 export function useMeetingUpload() {
   const [isLoading, setIsLoading] = useState(false)
@@ -182,6 +194,92 @@ export function useMeetingDetails(meetingId: string | null) {
     isLoading,
     error,
     refetch: fetchDetails
+  }
+}
+
+export function useMeetingChat(meetingId: string | null) {
+  const [messages, setMessages] = useState<MeetingChatTurn[]>([])
+  const [context, setContext] = useState<MeetingChatResponse['context'] | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const messagesRef = useRef<MeetingChatTurn[]>([])
+
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
+
+  useEffect(() => {
+    setMessages([])
+    setContext(null)
+    setError(null)
+    messagesRef.current = []
+  }, [meetingId])
+
+  const sendMessage = useCallback(
+    async (content: string) => {
+      if (!meetingId || !content.trim()) return
+
+      const historyPayload: ChatMessage[] = messagesRef.current.map(({ role, content }) => ({
+        role,
+        content,
+      }))
+
+      const userMessage: MeetingChatTurn = {
+        id: `${Date.now()}-user`,
+        role: 'user',
+        content: content.trim(),
+      }
+
+      const optimisticMessages = [...messagesRef.current, userMessage]
+      messagesRef.current = optimisticMessages
+      setMessages(optimisticMessages)
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const response = await api.chatWithMeeting(meetingId, {
+          message: content.trim(),
+          history: historyPayload,
+        })
+        setContext(response.context)
+
+        const assistantMessage: MeetingChatTurn = {
+          id: `${Date.now()}-assistant`,
+          role: 'assistant',
+          content: response.reply,
+        }
+
+        const updatedMessages = [...messagesRef.current, assistantMessage]
+        messagesRef.current = updatedMessages
+        setMessages(updatedMessages)
+      } catch (err) {
+        const errorMessage = err instanceof ApiError ? err.message : 'Chat request failed'
+        setError(errorMessage)
+        // rollback optimistic user message
+        const rollback = messagesRef.current.filter((msg) => msg.id !== userMessage.id)
+        messagesRef.current = rollback
+        setMessages(rollback)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [meetingId]
+  )
+
+  const resetChat = useCallback(() => {
+    messagesRef.current = []
+    setMessages([])
+    setContext(null)
+    setError(null)
+  }, [])
+
+  return {
+    messages,
+    context,
+    isLoading,
+    error,
+    sendMessage,
+    resetChat,
   }
 }
 
