@@ -1,20 +1,47 @@
 import os
 import uuid
 import shutil
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks
+import logging
+from typing import List, Optional
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.db import models, database
 from app.api.v1 import schemas
 from app.services.processing_service import process_meeting_file
+from kombu.exceptions import OperationalError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Define the directory to store uploaded files
-UPLOAD_DIRECTORY = "uploads"
+# Define the directory to store uploaded files (use absolute path)
+# Get the backend directory (parent of app directory)
+# __file__ is at: backend/app/api/v1/endpoints/meetings.py
+# We need to go up 4 levels to get to backend/
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+UPLOAD_DIRECTORY = os.path.join(BACKEND_DIR, "uploads")
 os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
+logger.info(f"Upload directory set to: {UPLOAD_DIRECTORY}")
 
 ALLOWED_EXTENSIONS = {".mp4", ".mp3", ".wav", ".m4a", ".avi", ".mov", ".mkv"}
 MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB
+
+
+@router.get("", response_model=List[schemas.MeetingResponse])
+def list_meetings(
+    limit: int = Query(20, ge=1, le=100, description="Maximum number of meetings to return"),
+    status: Optional[models.MeetingStatus] = Query(None, description="Optional status filter"),
+    db: Session = Depends(database.get_db)
+):
+    """Return recent meetings with optional status filtering."""
+    query = db.query(models.Meeting).order_by(models.Meeting.created_at.desc())
+
+    if status:
+        query = query.filter(models.Meeting.status == status)
+
+    meetings = query.limit(limit).all()
+    return meetings
+
 
 @router.post("/upload", response_model=schemas.MeetingResponse, status_code=202)
 def upload_meeting_file(
@@ -25,53 +52,97 @@ def upload_meeting_file(
     Upload an audio/video file for processing.
     The file is saved and a background task is triggered.
     """
-
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No filename provided")
-    
-    file_extension = os.path.splitext(file.filename)[1].lower()
-    if file_extension not in ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"File type {file_extension} not allowed. Supported: {', '.join(ALLOWED_EXTENSIONS)}"
-        )
-    
-    file.file.seek(0, 2)  # Seek to end
-    file_size = file.file.tell()
-    file.file.seek(0)  # Reset to beginning
-    
-    if file_size > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"File too large. Max size: {MAX_FILE_SIZE // (1024*1024)}MB"
-        )
-    
-    # Generate a unique filename to avoid conflicts
-    saved_filename = f"{uuid.uuid4()}{file_extension}"
-    file_path = os.path.join(UPLOAD_DIRECTORY, saved_filename)
-
-    # Save the uploaded file
     try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        logger.info(f"Received upload request for file: {file.filename}")
+        
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="No filename provided")
+        
+        file_extension = os.path.splitext(file.filename)[1].lower()
+        if file_extension not in ALLOWED_EXTENSIONS:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"File type {file_extension} not allowed. Supported: {', '.join(ALLOWED_EXTENSIONS)}"
+            )
+        
+        file.file.seek(0, 2)  # Seek to end
+        file_size = file.file.tell()
+        file.file.seek(0)  # Reset to beginning
+        
+        logger.info(f"File size: {file_size} bytes")
+        
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"File too large. Max size: {MAX_FILE_SIZE // (1024*1024)}MB"
+            )
+        
+        # Generate a unique filename to avoid conflicts
+        saved_filename = f"{uuid.uuid4()}{file_extension}"
+        file_path = os.path.join(UPLOAD_DIRECTORY, saved_filename)
+        
+        logger.info(f"Saving file to: {file_path}")
+
+        # Save the uploaded file
+        try:
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            logger.info(f"File saved successfully: {file_path}")
+        except Exception as e:
+            logger.error(f"Failed to save file: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
+
+        # Create a new meeting record in the database
+        try:
+            new_meeting = models.Meeting(
+                original_filename=file.filename,
+                saved_filename=saved_filename,
+                file_path=file_path,
+                status=models.MeetingStatus.PENDING
+            )
+            db.add(new_meeting)
+            db.commit()
+            db.refresh(new_meeting)
+            logger.info(f"Created meeting record with id: {new_meeting.id}")
+        except Exception as e:
+            logger.error(f"Failed to create meeting record: {e}", exc_info=True)
+            # Clean up saved file if database operation fails
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            raise HTTPException(status_code=500, detail=f"Failed to create meeting record: {e}")
+
+        # Trigger the background processing task
+        try:
+            logger.info(f"Queuing processing task for meeting {new_meeting.id}")
+            # Use delay() which should return immediately even if worker is not running
+            task_result = process_meeting_file.delay(str(new_meeting.id))
+            logger.info(f"Successfully queued processing task for meeting {new_meeting.id}, task_id: {task_result.id}")
+        except (OperationalError, ConnectionError) as e:
+            logger.error(f"Failed to queue processing task (Redis/Celery error) for meeting {new_meeting.id}: {e}", exc_info=True)
+            # Update meeting status to indicate task queue failure
+            new_meeting.status = models.MeetingStatus.FAILED
+            db.commit()
+            raise HTTPException(
+                status_code=503,
+                detail=f"Failed to queue processing task. Please ensure Redis is running and Celery worker is started. Error: {str(e)}"
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error queuing processing task for meeting {new_meeting.id}: {e}", exc_info=True)
+            new_meeting.status = models.MeetingStatus.FAILED
+            db.commit()
+            raise HTTPException(
+                status_code=500,
+                detail=f"Unexpected error queuing processing task: {str(e)}"
+            )
+
+        logger.info(f"Upload completed successfully for meeting {new_meeting.id}")
+        return new_meeting
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
-
-    # Create a new meeting record in the database
-    new_meeting = models.Meeting(
-        original_filename=file.filename,
-        saved_filename=saved_filename,
-        file_path=file_path,
-        status=models.MeetingStatus.PENDING
-    )
-    db.add(new_meeting)
-    db.commit()
-    db.refresh(new_meeting)
-
-    # Trigger the background processing task
-    process_meeting_file.delay(str(new_meeting.id))
-
-    return new_meeting
+        logger.error(f"Unexpected error in upload endpoint: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.get("/{meeting_id}/status", response_model=schemas.JobStatusResponse)

@@ -5,7 +5,16 @@ from app.db import database, models
 import os
 import subprocess
 import redis
+import logging
+from sqlalchemy import text
 from app.core.config import settings
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # For production, use Alembic migrations
 # models.Base.metadata.create_all(bind=database.engine)
@@ -54,7 +63,7 @@ def readiness_check():
     # Check database
     try:
         with database.SessionLocal() as db:
-            db.execute("SELECT 1")
+            db.execute(text("SELECT 1"))
         checks["database"] = "ok"
     except Exception as e:
         checks["database"] = f"error: {str(e)}"
@@ -70,22 +79,24 @@ def readiness_check():
     # Check FFmpeg
     try:
         ffmpeg_path = getattr(settings, 'FFMPEG_PATH', 'ffmpeg')
-        subprocess.run([ffmpeg_path, "-version"], capture_output=True, check=True)
+        subprocess.run([ffmpeg_path, "-version"], capture_output=True, check=True, timeout=5)
         checks["ffmpeg"] = "ok"
+    except subprocess.TimeoutExpired:
+        checks["ffmpeg"] = "error: FFmpeg check timed out"
     except Exception as e:
         checks["ffmpeg"] = f"error: {str(e)}"
     
-    # Check Whisper.cpp
+    # Check Deepgram API Key
     try:
-        if os.path.exists(settings.WHISPER_CPP_PATH):
-            checks["whisper"] = "ok"
+        if hasattr(settings, 'DEEPGRAM_API_KEY') and settings.DEEPGRAM_API_KEY:
+            checks["deepgram"] = "ok"
         else:
-            checks["whisper"] = f"error: path not found: {settings.WHISPER_CPP_PATH}"
+            checks["deepgram"] = "error: DEEPGRAM_API_KEY not set"
     except Exception as e:
-        checks["whisper"] = f"error: {str(e)}"
+        checks["deepgram"] = f"error: {str(e)}"
     
     # Check if all critical services are ok
-    critical_services = ["database", "redis", "ffmpeg", "whisper"]
+    critical_services = ["database", "redis", "ffmpeg", "deepgram"]
     all_ok = all(checks.get(service, "").startswith("error") == False for service in critical_services)
     
     if not all_ok:

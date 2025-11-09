@@ -1,5 +1,3 @@
-# requests==2.31.0
-
 fastapi==0.111.0
 uvicorn[standard]==0.29.0
 sqlalchemy==2.0.30
@@ -21,11 +19,9 @@ eventlet
 langchain==0.2.1
 langchain-community==0.2.1
 
-# For Speaker Diarization
-pyannote.audio==3.1.1
-torch==2.3.1
-torchaudio==2.3.1
-# For merging diarization and transcription results
+# For API requests (Deepgram)
+requests==2.31.0
+# For processing transcription results
 pandas==2.2.2
 
 # For Vector DB and Embeddings

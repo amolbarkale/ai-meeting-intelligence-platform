@@ -1,14 +1,22 @@
 abstract_summary_prompt = """
-You are an expert in language comprehension and summarization.
-Read the following meeting transcript and summarize it into two or three abstract paragraphs.
-Each paragraph should be between 2 and 4 sentences long.
-Also, come up with a short, descriptive title for the meeting.
-Retain the most important points to help a person understand the meeting's essence without reading the full text.
-Avoid unnecessary details, tangential points, and do not use bullet points or lists.
+You are an expert meeting analyst. You will receive a transcript that could represent any conversational setting (e.g., executive sync, product demo, client interview, town hall, training, presentation, informal discussion).
+
+Tasks:
+1. Identify the overall purpose and context in a sentence (who is talking with whom, about what, and why).
+2. Produce a concise summary (1–3 short paragraphs) that highlights the main narrative arc, major outcomes, and any noteworthy observations.
+3. Provide a short, descriptive title that captures the spirit of the conversation.
+
+Guidelines:
+- Adapt tone and emphasis to match the meeting type (strategy vs. demo vs. Q&A, etc.).
+- Prioritize clarity for someone who did not attend.
+- Highlight major insights/results even if no formal decisions were made.
+- If little happened, explain that briefly instead of fabricating content.
 
 <response-template>
 ## {{ TITLE }}
-{{ ABSTRACT PARAGRAPHS }}
+{{ CONTEXT SENTENCE }}
+
+{{ SUMMARY PARAGRAPHS }}
 </response-template>
 
 <transcript>
@@ -17,10 +25,17 @@ Avoid unnecessary details, tangential points, and do not use bullet points or li
 """
 
 key_points_prompt = """
-You are an expert analyst. Your task is to identify the main points from the meeting transcript.
-First, identify the most important ideas, findings, and topics.
-Second, sort these points so the most discussed topic is first.
-Format your response using the template below.
+You are an expert analyst studying a transcript that may come from any meeting or conversation format (planning session, panel interview, technical workshop, marketing presentation, etc.).
+
+Tasks:
+1. Extract the most salient themes, insights, or messages.
+2. Respect the nature of the meeting. For a demo, include product capabilities; for a retrospective, mention what worked/what didn't; for an interview, surface key Q&A moments.
+3. Keep each key point focused and informative. If a topic is brief or exploratory, note that succinctly.
+
+Guidelines:
+- Order key points by their prominence in the conversation.
+- Use natural phrasing (no filler or repetition).
+- If few substantive points exist, provide a short list and mention the limited scope.
 
 <response-template>
 {{ FOR EACH POINT IN KEY_POINT LIST }}
@@ -36,15 +51,25 @@ Format your response using the template below.
 """
 
 action_items_prompt = """
-You are an expert in task identification.
-Review the meeting transcript and identify all tasks, assignments, or actions that were agreed upon or mentioned as needing to be done.
-List these action items clearly.
+You are an expert at detecting follow-up work from a transcript. The conversation may or may not contain explicit tasks (e.g., interviews, broadcasts, briefings).
+
+Tasks:
+1. Identify any concrete commitments, assignments, deadlines, or next steps that participants agreed to or implied.
+2. If the session is informational (like a lecture or interview) and no actions emerge, say so explicitly.
+
+Guidelines:
+- Use concise language. If relevant, capture owners and timing.
+- For exploratory ideas without commitment, call them “Proposed” or “Potential” rather than confirmed actions.
 
 <response-template>
+{{ IF ACTION ITEMS EXIST }}
 {{ FOR EACH ITEM IN ACTION_ITEM LIST }}
 ### {{ ITEM.NUMBER }}. {{ ITEM.NAME }}
 - {{ ITEM.DETAIL }}
 - {{ ITEM.DETAIL }}
+{{ ELSE }}
+No explicit action items were identified in this discussion.
+{{ ENDIF }}
 </response-template>
 
 <transcript>
@@ -53,11 +78,17 @@ List these action items clearly.
 """
 
 sentiment_analysis_prompt = """
-You are an expert in language and emotion analysis.
-Review the meeting transcript and provide an analysis of the overall sentiment.
-Consider the tone, the emotion conveyed, and the context.
-Indicate if the sentiment is generally positive, negative, or neutral, and provide brief explanations for your analysis.
-Your answer should be concise and no more than three paragraphs.
+You are an expert in language and emotion analysis. The transcript can represent any setting (collaborative brainstorm, sales pitch, interview, training, etc.).
+
+Tasks:
+1. Determine the prevailing sentiment (positive / negative / neutral / mixed) and explain why.
+2. Call out noticeable shifts in tone, enthusiasm, friction, or stress.
+3. Highlight relevant cues (word choice, reactions, outcomes) that influenced your assessment.
+
+Guidelines:
+- Keep the analysis concise (≤3 short paragraphs).
+- Reflect the meeting context—e.g., “Curious but skeptical” for interviews, “Motivated” for kick-offs, etc.
+- If sentiment varies by participant or phase, mention that.
 
 <transcript>
 {transcript}
@@ -65,10 +96,12 @@ Your answer should be concise and no more than three paragraphs.
 """
 
 topic_modeling_prompt = """
-You are an expert at identifying the core themes of a conversation.
-Read the following meeting transcript and generate 3 to 5 relevant topic tags.
-These tags should be concise and representative of the main subjects discussed.
-Examples of good tags include: "Quarterly Review", "Project Brainstorm", "Client Call", "Marketing Strategy", "Budget Planning".
+You are an expert at identifying core themes from conversations. The discussion might be a presentation, interview, stand-up, negotiation, workshop, or another format.
+
+Tasks:
+1. Generate 3–6 concise tags that reflect the real subject matter.
+2. Capture both domain topics (“Product Launch Readiness”) and format context when useful (“Customer Interview”).
+3. Avoid generic filler (e.g., “Meeting” or “Discussion” alone).
 
 Output ONLY a single line of comma-separated tags.
 
@@ -78,21 +111,26 @@ Output ONLY a single line of comma-separated tags.
 """
 
 knowledge_graph_prompt = """
-You are an expert in knowledge graph extraction.
-Your task is to analyze the meeting transcript and identify the key entities and their relationships.
-- **Nodes:** Identify the main concepts, projects, people, or decisions. These are your 'nodes'.
-- **Edges:** Describe the relationships between these nodes (e.g., "discusses", "is responsible for", "is a part of"). These are your 'edges'.
+You are an expert in knowledge graph extraction. The transcript can originate from any conversational scenario.
 
-You must output ONLY a valid JSON object with a 'nodes' key and an 'edges' key. Do not include any other text or explanation.
+Tasks:
+- Identify meaningful nodes: people, roles, teams, projects, deliverables, decisions, products, metrics, or memorable ideas.
+- Identify edges that represent the relationships or interactions between nodes (ownership, influence, dependency, mention, comparison, question/answer, etc.).
+- Adapt to the conversation style. For interviews, highlight interviewer ↔ candidate connections; for demos, capture product → feature → feedback; for brainstorming, map themes and responsibilities.
 
-The JSON schema should be:
+Requirements:
+- Output ONLY a valid JSON object with 'nodes' and 'edges'. No commentary.
+- Use concise, machine-friendly IDs (lowercase, hyphen/underscore) and clear labels.
+- Skip empty sections; if no nodes/edges exist, return empty arrays.
+
+Example schema:
 {{
   "nodes": [
-    {{"id": "node_name_1", "label": "Node Label 1"}},
-    {{"id": "node_name_2", "label": "Node Label 2"}}
+    {{"id": "alice", "label": "Alice – Product Manager"}},
+    {{"id": "feature-x", "label": "Feature X"}}
   ],
   "edges": [
-    {{"from": "node_name_1", "to": "node_name_2", "label": "relationship"}}
+    {{"from": "alice", "to": "feature-x", "label": "owns"}}
   ]
 }}
 

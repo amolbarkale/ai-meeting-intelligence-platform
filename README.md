@@ -10,8 +10,8 @@ Transform your post-meeting workflow with intelligent audio/video processing, au
 ## ✨ Key Features
 
 *   **🎯 Intelligent Audio/Video Processing** - Support for multiple formats (MP4, WAV, MP3, AVI, MOV, MKV) with robust file validation
-*   **🎙️ High-Fidelity Transcription** - Whisper.cpp-powered speech-to-text with speaker diarization using Pyannote.audio
-*   **🤖 AI-Powered Summarization** - Generate comprehensive summaries, key points, and action items using Ollama/OpenAI LLMs
+*   **🎙️ High-Fidelity Transcription** - Deepgram API-powered speech-to-text with built-in speaker diarization
+*   **🤖 AI-Powered Summarization** - Generate comprehensive summaries, key points, and action items using OpenAI GPT-4o-mini
 *   **💭 Sentiment Analysis** - Analyze emotional tone and highlight contentious or positive moments
 *   **🔍 Vector Search & Knowledge Base** - ChromaDB-powered semantic search across all meeting content
 *   **📊 Real-time Processing** - Asynchronous task processing with Celery and Redis for scalable performance
@@ -26,7 +26,7 @@ Transform your post-meeting workflow with intelligent audio/video processing, au
 | **Backend** | ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white) ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=FastAPI&logoColor=white) | High-performance async web framework |
 | **Database** | ![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-1C1C1C?style=for-the-badge&logo=sqlalchemy&logoColor=white) | Lightweight relational database with ORM |
 | **Task Queue** | ![Celery](https://img.shields.io/badge/Celery-37814A?style=for-the-badge&logo=celery&logoColor=white) ![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white) | Asynchronous task processing |
-| **AI/ML** | ![Whisper](https://img.shields.io/badge/Whisper-FF6B6B?style=for-the-badge&logo=openai&logoColor=white) ![Pyannote](https://img.shields.io/badge/Pyannote-FF6B6B?style=for-the-badge&logo=pytorch&logoColor=white) ![Ollama](https://img.shields.io/badge/Ollama-000000?style=for-the-badge&logo=ollama&logoColor=white) | Speech-to-text, speaker diarization, LLM |
+| **AI/ML** | ![Deepgram](https://img.shields.io/badge/Deepgram-FF6B6B?style=for-the-badge&logo=deepgram&logoColor=white) ![OpenAI](https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white) | Speech-to-text with diarization, LLM |
 | **Media Processing** | ![FFmpeg](https://img.shields.io/badge/FFmpeg-000000?style=for-the-badge&logo=ffmpeg&logoColor=white) | Audio/video conversion and preprocessing |
 | **Vector DB** | ![ChromaDB](https://img.shields.io/badge/ChromaDB-FF6B6B?style=for-the-badge&logo=chromadb&logoColor=white) ![LangChain](https://img.shields.io/badge/LangChain-FF6B6B?style=for-the-badge&logo=langchain&logoColor=white) | Vector storage and LLM orchestration |
 | **Infrastructure** | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white) | Containerization and deployment |
@@ -45,8 +45,7 @@ AI-Meeting-Intelligence-Platform/
 │   │   ├── 📁 api/               # REST API endpoints
 │   │   ├── 📁 services/          # Core business logic
 │   │   └── 📁 db/                # Database models & config
-│   ├── 📁 uploads/               # Processed meeting files
-│   └── 📁 whisper.cpp/           # Local Whisper installation
+│   └── 📁 uploads/               # Processed meeting files
 ├── 📁 frontend/                   # Next.js React frontend
 │   ├── 📁 app/                    # Next.js app router
 │   ├── 📁 components/             # Reusable UI components
@@ -59,7 +58,7 @@ AI-Meeting-Intelligence-Platform/
 
 
 ## Quick Start
-```bash
+   ```bash
 # 1) Start Redis (Docker)
 docker run -d -p 6379:6379 redis
 
@@ -91,28 +90,23 @@ celery -A worker.celery_app worker --loglevel=info -P eventlet
 - Git
 
 ### 2) Create venv and install deps
-```bash
+   ```bash
 cd backend
 python -m venv .venv && . ./.venv/Scripts/activate  # Windows
 # python3 -m venv .venv && source .venv/bin/activate # macOS/Linux
 pip install --upgrade pip
-pip install -r requirements.txt
-```
+   pip install -r requirements.txt
+   ```
 
 ### 3) External tools
-- FFmpeg is required for audio preprocessing
+- FFmpeg is required for audio preprocessing (optional - Deepgram can handle most formats directly)
   - Windows: download from `https://ffmpeg.org/download.html` and ensure `ffmpeg.exe` is available, or set `FFMPEG_PATH` in `.env`.
   - macOS: `brew install ffmpeg`
   - Linux: `sudo apt update && sudo apt install ffmpeg`
 
-- Whisper.cpp for transcription
-  - Windows: follow `backend/SETUP_WHISPER.md` for prebuilt binaries and model download
-  - macOS/Linux (source build):
-    ```bash
-    git clone https://github.com/ggerganov/whisper.cpp.git
-    cd whisper.cpp && make
-    ./models/download-ggml-model.sh base
-    ```
+- Deepgram API for transcription and diarization
+  - Get your API key from [Deepgram](https://console.deepgram.com/)
+  - No local installation required - cloud-based service
 
 ### 4) Environment variables
 Create `backend/.env` (use `.env.example` as a guide):
@@ -121,19 +115,13 @@ DATABASE_URL=sqlite:///./meetings.db
 CELERY_BROKER_URL=redis://127.0.0.1:6379/0
 CELERY_RESULT_BACKEND=redis://127.0.0.1:6379/0
 
-# FFmpeg
+# FFmpeg (optional - Deepgram can handle most formats)
 FFMPEG_PATH=./ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe    # Windows example
 
-# Whisper.cpp binary + model
-WHISPER_CPP_PATH=./whisper.cpp/Release/main.exe                 # Windows example
-WHISPER_CPP_MODEL_PATH=./ggml-base.bin                          # or ./whisper.cpp/models/ggml-base.bin
-
-# Diarization (optional; enables Pyannote)
-HF_TOKEN=your_huggingface_token
+# Deepgram API
+DEEPGRAM_API_KEY=your_deepgram_api_key
 
 # LLMs
-OLLAMA_BASE_URL=http://127.0.0.1:11434
-OLLAMA_MODEL=llama3.2:1b
 OPENAI_API_KEY=your_openai_key
 
 # Chroma (vector store) path
@@ -142,7 +130,7 @@ CHROMA_DB_PATH=./chroma_langchain_db
 
 Fail-fast checks are available at:
 - Health: `GET /health`
-- Readiness: `GET /ready` (checks DB, Redis, FFmpeg, Whisper.cpp path)
+- Readiness: `GET /ready` (checks DB, Redis, FFmpeg, Deepgram API key)
 
 ### 5) Start infrastructure
 ```bash
@@ -152,11 +140,11 @@ docker run -d -p 6379:6379 redis
 # Stop later (find container ID first)
 docker ps
 docker stop <container-id>
-```
+   ```
 
 ### 6) Run backend services
 In two terminals (with `backend/.venv` activated):
-```bash
+   ```bash
 # API
 uvicorn app.main:app --reload --port 8000
 
@@ -177,8 +165,8 @@ python -c "from app.db import models, database; models.Base.metadata.create_all(
 - Search: `GET /api/v1/search?query=...&top_k=5`
 
 Notes:
-- If `HF_TOKEN` is not set, diarization is skipped and speakers are marked `UNKNOWN_SPEAKER`.
-- If Ollama/OpenAI are unavailable, insight generation may fail; the task auto-retries.
+- Deepgram API handles both transcription and diarization in a single call.
+- If OpenAI API is unavailable, insight generation may fail; the task auto-retries.
 
 ---
 
@@ -192,16 +180,13 @@ npm run dev
 
 ---
 
-## Whisper, FFmpeg, Tokens, and Keys
+## API Keys and Configuration
 
-### FFmpeg
-Ensure `ffmpeg` is installed and on PATH, or set `FFMPEG_PATH` in `.env`.
+### FFmpeg (Optional)
+Ensure `ffmpeg` is installed and on PATH, or set `FFMPEG_PATH` in `.env`. Note: Deepgram can process most formats directly, so FFmpeg is optional.
 
-### Whisper.cpp
-See `backend/SETUP_WHISPER.md` for Windows prebuilt setup, model downloads, and verification commands.
-
-### Hugging Face Token (Pyannote)
-Set `HF_TOKEN` in `.env` to enable diarization. Without it, diarization is skipped gracefully.
+### Deepgram API Key
+Set `DEEPGRAM_API_KEY` in `.env` to enable transcription and speaker diarization. Get your key from [Deepgram Console](https://console.deepgram.com/).
 
 ### OpenAI API Key
 Set `OPENAI_API_KEY` to enable OpenAI embeddings via LangChain. Chunks are stored in Chroma at `CHROMA_DB_PATH`.
@@ -225,8 +210,14 @@ Set `OPENAI_API_KEY` to enable OpenAI embeddings via LangChain. Chunks are store
 
 ---
 
-## Alternative: Deepgram for STT and Diarization
-You may opt to use Deepgram’s APIs for speech-to-text and diarization as a managed alternative to local Whisper.cpp + Pyannote. This can reduce setup complexity and improve scale. See Deepgram’s site: [Deepgram Voice AI Platform](https://deepgram.com/).
+## Using Deepgram API
+The platform uses Deepgram API for speech-to-text and diarization. This managed service provides:
+- **High Accuracy**: Industry-leading transcription quality
+- **Built-in Diarization**: Automatic speaker identification with `diarize=true`
+- **Multiple Formats**: Supports MP3, WAV, M4A, MP4, WebM, and more
+- **Scalable**: Cloud-based service with no local model downloads required
+
+See Deepgram's site: [Deepgram Voice AI Platform](https://deepgram.com/)
 
 ---
 
@@ -248,8 +239,9 @@ celery -A worker.celery_app worker --loglevel=info -P eventlet
 ---
 
 ## Troubleshooting
-- `/ready` returns 503: verify Redis is running, FFmpeg is installed, Whisper paths exist.
+- `/ready` returns 503: verify Redis is running, FFmpeg is installed (optional), Deepgram API key is set.
 - Upload fails: verify file extension and ensure file size ≤ 100MB.
-- Insights fail: ensure Ollama is running and `OLLAMA_MODEL` is available, or set `OPENAI_API_KEY`.
+- Transcription fails: ensure `DEEPGRAM_API_KEY` is set correctly in your `.env` file.
+- Insights fail: ensure `OPENAI_API_KEY` is set correctly in your `.env` file.
 
 ---
