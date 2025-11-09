@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,11 +12,19 @@ export default function MeetingDetailPage() {
   const router = useRouter()
   const meetingId = params.id as string
 
-  const { meeting, isLoading, error } = useMeetingDetails(meetingId)
+  const { meeting, isLoading, error, refetch } = useMeetingDetails(meetingId)
   const { status } = useMeetingStatus(meetingId)
+  const currentStatus = status?.status || meeting?.status
+
+  useEffect(() => {
+    if (!status?.status || !meeting) return
+
+    if ((status.status === 'COMPLETED' || status.status === 'FAILED') && meeting.status !== status.status) {
+      refetch()
+    }
+  }, [status?.status, meeting?.status, refetch])
 
   const getStatusIcon = () => {
-    const currentStatus = status?.status || meeting?.status
     switch (currentStatus) {
       case 'COMPLETED':
         return <CheckCircle className="w-4 h-4 text-green-500" />
@@ -29,7 +38,6 @@ export default function MeetingDetailPage() {
   }
 
   const getStatusColor = () => {
-    const currentStatus = status?.status || meeting?.status
     switch (currentStatus) {
       case 'COMPLETED':
         return 'bg-green-100 text-green-800'
@@ -88,9 +96,9 @@ export default function MeetingDetailPage() {
     )
   }
 
-  const isProcessing = meeting.status === 'PROCESSING' || meeting.status === 'PENDING'
-  const isCompleted = meeting.status === 'COMPLETED'
-  const isFailed = meeting.status === 'FAILED'
+  const isProcessing = currentStatus === 'PROCESSING' || currentStatus === 'PENDING'
+  const isCompleted = currentStatus === 'COMPLETED'
+  const isFailed = currentStatus === 'FAILED'
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
@@ -115,7 +123,7 @@ export default function MeetingDetailPage() {
             <div className="flex items-center gap-2">
               {getStatusIcon()}
               <Badge className={getStatusColor()}>
-                {meeting.status.toLowerCase()}
+                {(currentStatus || 'unknown').toLowerCase()}
               </Badge>
             </div>
           </div>

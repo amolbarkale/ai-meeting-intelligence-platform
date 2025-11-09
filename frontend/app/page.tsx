@@ -1,20 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Menu, Plus } from "lucide-react"
 import MeetingUpload from "@/components/meeting-upload"
 import MeetingsList from "@/components/meetings-list"
 import SearchBar from "@/components/search-bar"
-import { api, MeetingResponse } from "@/lib/api"
+import { useMeetingsList } from "@/lib/hooks"
 
 export default function Home() {
-  const [meetings, setMeetings] = useState<MeetingResponse[]>([])
-  const [isLoadingMeetings, setIsLoadingMeetings] = useState(true)
-  const [meetingsError, setMeetingsError] = useState<string | null>(null)
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const router = useRouter()
+  const { meetings, isLoading, error, refresh } = useMeetingsList()
 
   // Mock data for demonstration (when no real meetings exist)
   const mockMeeting = {
@@ -99,27 +96,9 @@ export default function Home() {
     },
   }
 
-  const fetchMeetings = async () => {
-    try {
-      setIsLoadingMeetings(true)
-      setMeetingsError(null)
-      
-      // For now, we'll use mock data since we don't have a list endpoint
-      // In a real implementation, you'd call: const data = await api.getMeetings()
-      setMeetings([])
-    } catch (err) {
-      setMeetingsError(err instanceof Error ? err.message : "Failed to load meetings")
-    } finally {
-      setIsLoadingMeetings(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchMeetings()
-  }, [refreshTrigger])
-
   const handleUploadSuccess = (meetingId: string) => {
-    setRefreshTrigger(prev => prev + 1)
+    refresh()
+    router.push(`/meeting/${meetingId}`)
   }
 
   const hasRealMeetings = meetings.length > 0
@@ -151,8 +130,8 @@ export default function Home() {
             <div className="lg:col-span-2">
               <MeetingsList 
                 meetings={meetings}
-                isLoading={isLoadingMeetings}
-                error={meetingsError}
+                isLoading={isLoading}
+                error={error}
               />
             </div>
           </div>

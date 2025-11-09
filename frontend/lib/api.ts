@@ -6,6 +6,7 @@ export interface MeetingResponse {
   original_filename: string
   status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
   created_at: string
+  updated_at?: string
 }
 
 export interface JobStatusResponse {
@@ -62,6 +63,24 @@ export const api = {
     })
     
     return handleResponse<MeetingResponse>(response)
+  },
+
+  // List meetings with optional status filter
+  async listMeetings(params: { limit?: number; status?: MeetingResponse['status'] } = {}): Promise<MeetingResponse[]> {
+    const searchParams = new URLSearchParams()
+    if (params.limit) {
+      searchParams.set('limit', params.limit.toString())
+    }
+    if (params.status) {
+      searchParams.set('status', params.status)
+    }
+
+    const url = searchParams.toString()
+      ? `${API_BASE_URL}/meetings?${searchParams.toString()}`
+      : `${API_BASE_URL}/meetings`
+
+    const response = await fetch(url)
+    return handleResponse<MeetingResponse[]>(response)
   },
 
   // Get meeting status
