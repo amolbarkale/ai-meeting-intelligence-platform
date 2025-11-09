@@ -21,9 +21,10 @@ export default function MeetingCard({ meeting }: MeetingCardProps) {
   useEffect(() => {
     if (!isPolling) return
 
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`http://localhost:8000/meetings/${meeting.id}/status`)
+        const response = await fetch(`${apiBaseUrl}/api/v1/meetings/${meeting.id}/status`)
         if (response.ok) {
           const data = await response.json()
           setStatus(data.status)

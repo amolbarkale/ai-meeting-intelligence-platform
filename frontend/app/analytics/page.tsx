@@ -21,14 +21,15 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     const fetchAnalytics = async () => {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
       try {
         const [overviewRes, sentimentRes, topicsRes, timelineRes, processingRes, graphRes] = await Promise.all([
-          fetch("http://localhost:8000/analytics/overview"),
-          fetch("http://localhost:8000/analytics/sentiment-distribution"),
-          fetch("http://localhost:8000/analytics/top-topics?limit=8"),
-          fetch("http://localhost:8000/analytics/sentiment-timeline?days=30"),
-          fetch("http://localhost:8000/analytics/processing-stats"),
-          fetch("http://localhost:8000/analytics/knowledge-graph"),
+          fetch(`${apiBaseUrl}/analytics/overview`),
+          fetch(`${apiBaseUrl}/analytics/sentiment-distribution`),
+          fetch(`${apiBaseUrl}/analytics/top-topics?limit=8`),
+          fetch(`${apiBaseUrl}/analytics/sentiment-timeline?days=30`),
+          fetch(`${apiBaseUrl}/analytics/processing-stats`),
+          fetch(`${apiBaseUrl}/analytics/knowledge-graph`),
         ])
 
         if (overviewRes.ok) setOverview(await overviewRes.json())
