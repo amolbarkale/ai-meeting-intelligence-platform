@@ -498,7 +498,7 @@ if diarization_pipeline is None:
 
 ### 3. Challenge: Long-Running Task Management
 
-**Problem**: AI processing can take minutes, requiring robust task management
+**Problem**: AI processing can fail at sometime, requiring robust task management
 
 **Solution**: Celery with retry mechanisms and status tracking
 ```python

@@ -147,7 +147,7 @@ export default function MeetingDetailPage() {
                 <Loader2 className="w-12 h-12 animate-spin text-blue-500 mx-auto mb-4" />
                 <h2 className="text-xl font-semibold text-slate-900 mb-2">Processing Meeting</h2>
                 <p className="text-slate-600 mb-4">
-                  Your meeting is being analyzed. This may take a few minutes.
+                  Your meeting is being analyzed. This may take a few seconds.
                 </p>
                 <div className="text-sm text-slate-500">
                   <p>• Converting audio to text</p>
